@@ -85,7 +85,7 @@ server type `node`, `entry_point` `server/dist/index.js`, `command` `node` with
 `scripts/build/claude-bundle-manifest.mjs` so the version cannot drift. `npm run bundle:validate`
 checks it with Anthropic's own CLI (`mcpb validate`, a dev dependency), which matters because
 the 0.4 schema rejects unknown keys outright.
-Claude Desktop asks for six settings, all optional, each mapped to the environment variable
+Claude Desktop asks for eight settings, all optional, each mapped to the environment variable
 the server already reads:
 
 | Setting | Variable | Default when left empty |
@@ -96,6 +96,8 @@ the server already reads:
 | Live bridge port | `DCS_BRIDGE_PORT` | `8899` |
 | FFmpeg executable | `DCS_FFMPEG_PATH` | `ffmpeg` on PATH |
 | Mission output folder | `DCS_MISSION_OUTPUT_DIR` | Current user's `Saved Games/DCS/Missions/My Mission` |
+| ElevenLabs API key (stored as a secret) | `ELEVENLABS_API_KEY` | installed Windows voices; with no voice, DCS's own ATC |
+| ElevenLabs default voice id | `ELEVENLABS_VOICE_ID` | none: pass a voice id per call |
 
 An unanswered field expands to an empty string, which the server treats as unset — that case
 is what `bundle:verify` exercises, by launching the unpacked bundle with every field empty.

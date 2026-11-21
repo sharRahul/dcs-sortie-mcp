@@ -72,6 +72,7 @@ Existing source missions are preserved. Replacing an existing output requires an
 - **No DCS tools in your chat?** Follow the setup for your app, restart it and open a new chat.
 - **DCS is not connected?** File creation still works. Live controls need the optional DCS connection script and a running simulator. [Setup](docs/reference/technical-reference.md#live-bridge-setup)
 - **Audio conversion fails?** It needs optional FFmpeg. [Audio setup](docs/user/mission-audio.md)
+- **No spoken ATC?** Voices need FFmpeg plus an ElevenLabs key (`ELEVENLABS_API_KEY`) or installed Windows voices; without one, missions keep DCS's own ATC. [Speech](docs/user/mission-audio.md#speech-text-to-audio)
 - **A mission will not open?** Ask your assistant to validate it and check the DCS error log.
 
 [App connection guide](docs/user/clients.md) · [Example scenarios](examples/scenarios/README.md) · [Technical reference](docs/reference/technical-reference.md) · [Tested features and limits](docs/development/verification.md) · [Report a problem](https://github.com/sharRahul/dcs-sortie-mcp/issues)

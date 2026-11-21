@@ -1,10 +1,37 @@
 # Mission audio
 
-Convert local speech recordings, including an MP3 downloaded from ElevenLabs, into DCS mission audio with dcs_audio_convert. Conversion and trigger authoring run with DCS closed. No ElevenLabs API key or network service is involved in this tool.
+Convert local recordings into DCS mission audio with dcs_audio_convert, or have it speak a line for you. Conversion and trigger authoring run with DCS closed. Spoken ATC and briefings are generated the same way (see below).
 
 ## Setup
 
 Install FFmpeg with its MP3 decoder and Vorbis encoder. Put its executable on PATH, or add DCS_FFMPEG_PATH to the MCP server environment, for example C:/Tools/ffmpeg/bin/ffmpeg.exe. Restart the MCP server after changing its environment. FFmpeg is an optional external dependency and is not bundled or automatically downloaded by the server.
+
+## Speech (text to audio)
+
+dcs_audio_convert also takes `speech` instead of `inputPath`:
+
+~~~json
+{
+  "speech": { "text": "Kutaisi Ground, Viper 1-1, request startup.", "provider": "auto" },
+  "outputPath": "F:/mission-audio/startup.ogg",
+  "format": "ogg",
+  "radioEffect": true
+}
+~~~
+
+| provider | Needs | Sends |
+|---|---|---|
+| `elevenlabs` | `ELEVENLABS_API_KEY` in the server environment; `voice` = an ElevenLabs voice id, or `ELEVENLABS_VOICE_ID` | only the line text, to api.elevenlabs.io |
+| `windows` | Windows with at least one installed voice (`voice` = its name) | nothing - fully offline |
+| `auto` (default) | ElevenLabs when the key is set, else Windows voices | |
+
+The result always goes through FFmpeg, so FFmpeg is required either way. `radioEffect` band-limits to 300-3400 Hz with light compression so a call sounds like a radio. The Windows path was verified on this project's test machine; the ElevenLabs path has not been run here (no key).
+
+## Spoken ATC and briefing
+
+`dcs_miz_create_flight` / `dcs_miz_configure_flight` with `atc` (and `dcs_scenario_generate` for the player) speak every ATC line and a detailed briefing built from the mission file, with separate voices per role (`atc.voice.briefing/pilot/controller/awacs`). DCS's own ATC is then set silent at those airfields.
+
+If no voice can be produced - no ElevenLabs key and no Windows voices, or no FFmpeg - the flight **keeps DCS's own ATC**: nothing is silenced, no scripted calls are written, and only the briefing is added as text. `atc.voice: false` asks for text-only scripted ATC on purpose.
 
 ## Convert
 

@@ -55,6 +55,8 @@ export function buildManifest(pkg) {
           DCS_BRIDGE_PORT: '${user_config.bridge_port}',
           DCS_FFMPEG_PATH: '${user_config.ffmpeg_path}',
           DCS_MISSION_OUTPUT_DIR: '${user_config.mission_output_dir}',
+          ELEVENLABS_API_KEY: '${user_config.elevenlabs_api_key}',
+          ELEVENLABS_VOICE_ID: '${user_config.elevenlabs_voice_id}',
         },
       },
     },
@@ -102,7 +104,22 @@ export function buildManifest(pkg) {
         title: 'FFmpeg executable',
         description:
           'Optional. Needed only to convert your own MP3/WAV/OGG files into mission audio. Leave empty to use '
-          + 'ffmpeg from PATH.',
+          + 'ffmpeg from PATH. Also needed for spoken ATC and briefings.',
+        required: false,
+      },
+      elevenlabs_api_key: {
+        type: 'string',
+        title: 'ElevenLabs API key',
+        description:
+          'Optional. Voices ATC calls and briefings with ElevenLabs; only the line text is sent. Leave empty to use '
+          + 'the installed Windows voices. With no voice at all, missions keep DCS\'s own ATC.',
+        sensitive: true,
+        required: false,
+      },
+      elevenlabs_voice_id: {
+        type: 'string',
+        title: 'ElevenLabs default voice id',
+        description: 'Optional. Voice id from your ElevenLabs voice library, used when a call names no voice.',
         required: false,
       },
     },

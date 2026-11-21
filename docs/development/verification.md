@@ -1331,3 +1331,26 @@ fire; an em dash mangled by a PowerShell rewrite of the builder script.
 
 Not covered: a chat inside the Claude Desktop or ChatGPT app driving the build (this session called the same
 server over MCP), multiplayer, and the troop boarding itself.
+
+## Airfield dressing with AI only, and driving DCS input — 2026-11-21 (DCS 2.9 MT, Caucasus)
+
+No pilot. `scripts/dev/build-ramp-check-mission.mjs` builds the mission: Kutaisi and Senaki-Kolkhi dressed with
+`populateAirfield` at the default (corpus-median) occupancy with support kits, plus four AI jets per field on a hot
+parking start with a route away. An embedded start script logs `[RAMPCHK]` lines to dcs.log: scenery
+(`world.searchObjects` SCENERY, 15 m) and `land.getSurfaceType` per placed object, HIT/CRASH/DEAD/TAKEOFF events, and
+each jet's position every 30 s. DCS was started with `DCS.exe --force_disable_VR --no-launcher <miz>`, FLY clicked
+with `scripts/dev/dcs-input.ps1`, and DCS killed afterwards.
+
+| Run | Result |
+|---|---|
+| 1: kits also placed "behind" the parked AI flights | All four Kutaisi jets never moved in 10 min; Senaki's four took off (t=196-304) with no HIT/CRASH. Cause: a parked flight is written with heading 0 and DCS turns it to the slot's own direction at spawn (Kutaisi 2.867 rad), so the "behind" kit sat 11-22 m in front of the lead. |
+| 2: flight kits removed (populate kits only) | All eight jets took off (Kutaisi t=227-334, Senaki t=196-304), zero HIT/CRASH. |
+
+Both runs: 0 of 58 placed objects within 12 m of scenery (hangars/buildings); 39 on surface 5 (concrete - DCS
+reports runway, taxiway and apron alike) and 19 on surface 1 (grass at the apron edge). Not established: how the
+dressing looks to a person, or whether a kit sits on a taxiway these particular jets did not use.
+
+Input: a mission with no player slot still stops at the briefing. A DPI-aware mouse click on FLY (physical 2623,1528
+at 3840x2160, 150 %) starts it. Keys reach DCS only as `SendInput` scancodes after `SetForegroundWindow`: F2 (0x3C)
+switched the external view to the next unit and F10 (0x44) opened the map, both confirmed by screenshot. The earlier
+"synthetic keys do not reach DCS" result was virtual-key input.
