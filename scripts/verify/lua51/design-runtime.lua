@@ -21,6 +21,15 @@ function c_unit_dead(id) return deadUnits[id] == true end
 function a_set_flag(flag) setFlag(flag, 1) end
 function a_set_flag_value(flag, value) setFlag(flag, value) end
 function a_out_text_delay_s() end
+-- Player briefing/ATC (src/miz/atc.ts): the player never flies here, so its calls are inert.
+function a_set_ATC_silent_mode() end
+function a_out_text_delay_g() end
+function a_out_sound_g() end
+function a_add_radio_item_for_group() end
+function a_remove_radio_item_for_group() end
+function c_unit_altitude_higher_AGL() return false end
+function c_unit_in_zone() return false end
+function c_unit_out_zone() return false end
 function a_do_script(source) assert(loadstring(source))() end
 function a_set_mission_result(score) scores[#scores + 1] = score end
 for _, section in ipairs({ 'conditions', 'actions', 'func', 'funcStartup' }) do
