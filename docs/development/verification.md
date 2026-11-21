@@ -1358,3 +1358,19 @@ Input: a mission with no player slot still stops at the briefing. A DPI-aware mo
 at 3840x2160, 150 %) starts it. Keys reach DCS only as `SendInput` scancodes after `SetForegroundWindow`: F2 (0x3C)
 switched the external view to the next unit and F10 (0x44) opened the map, both confirmed by screenshot. The earlier
 "synthetic keys do not reach DCS" result was virtual-key input.
+
+## Depth sortie, live (2026-11-21) - `scripts/dev/build-depth-sortie.mjs`
+
+DCS 2.9 MT, Caucasus, started with `DCS.exe --force_disable_VR --no-launcher <miz>`; FLY and every F10 item were
+driven by the agent through `scripts/dev/dcs-input.ps1` (scancodes `\` 0x2B, F10 0x44, F1 0x3B). No human input.
+
+- **Wind convention confirmed by DCS itself.** `weather.wind.atGround = {speed 6, dir 70}` shows in the briefing as
+  "At GRND 6 m/s, 250 deg, Meteo 70 deg": the file's `dir` is blow-TOWARD, the +180 rule is right, and the into-wind
+  pick chose runway 25 at Kutaisi.
+- **Scripted ATC, ground phase VERIFIED.** Briefing message shown at start; F10 > Other offered "ATC: Request startup",
+  then "Request taxi", then "Ready for departure", each replacing the last. Flags flipped startup t=17, taxi t=37,
+  takeoff t=57, and each reply ("startup approved, runway 25", "taxi to runway 25, hold short") was displayed.
+  Not reached: the airborne AGL handoff, arrival zones and landing clearance (they need the jet flown).
+- **FARP cold start VERIFIED.** UH-1H `farp_cold` spawned on the pad (pad and all 3 support vehicles on LAND),
+  ENGINE_STARTUP t=76, inAir t=202, TAKEOFF t=220, 715 m along its route at 254 m AGL by t=242. No HIT/CRASH.
+  Rearming from the support group was not exercised.
