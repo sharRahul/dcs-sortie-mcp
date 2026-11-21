@@ -1431,3 +1431,18 @@ t=1802 (fuel 0.25 -> 0.054). Both runs hovered at the SAME spot (x=-283964, y=68
 landing as one at Kutaisi rather than at the pad. Not yet established: whether a FARP placed by this server is
 a DCS `Airbase` at runtime (`Airbase.getByName`) and which id DCS gives it, which a landing linked by
 `helipadId` needs to resolve. Refuelling remains unexercised.
+
+**Landing probe (same day, `scripts/dev/build-farp-landing-probe.mjs`): FARP landing WORKS; AI is not refuelled.**
+The FARP was moved 12 km from Kutaisi, and three AI UH-1Hs flew in one run, with no human input.
+- DCS registers the placed FARP as an airbase: `Airbase.getByName` -> id=1, category 1 (helipad), callsign
+  London. That is the same id the `linkUnit`/`helipadId` landing points name.
+- All three landed ON the FARP, with `S_EVENT_LAND` reporting `place=FARP-Probe`: B (air start, plain
+  unlinked Land point) at t=179, A (air start, linked Land) at t=300, and C (`farp_cold`, a leg out, linked
+  Land back: the case that failed twice) at t=497.
+- So the authored landing waypoint is right. The two failed runs had the pad 3 km from Kutaisi, and both
+  hovered at the same spot 1.4 km from that airfield. A FARP that close to an airfield is the remaining
+  difference. That it is the cause is inferred, not isolated by a run.
+- **No refuel.** Landed next to the FARP support group (fuel truck, ammo truck, HMMWV), A's fuel stayed at
+  0.440 from t=302 to t=902, and B's and C's were also flat. An AI helicopter parked at a serviced FARP is not
+  refuelled within 10 min. What would make DCS service AI there (a mission re-tasking, a takeoff from it, or
+  only player requests) is not established. Player rearm/refuel through the ground crew is untested.
