@@ -1454,3 +1454,8 @@ Re-test of the 17 Nov failure: with DCS at the main menu (`phase: menu`), `dcs_r
 `phase == "running"`, as `loadmission` already did: "runtime: no mission is running (phase 'menu') ...".
 Regression: `tests/fixtures/hook-load.lua` `RUNTIME_MENU_REFUSED`. Installed into Saved Games, DCS restarted, and
 the call from the menu returned that message live.
+
+Reinstall (same day): `npm run bundle:build`/`bundle:verify` and `plugin:build`/`plugin:verify` passed; the installed
+extension folder and the Codex plugin cache `dcs-chatgpt/0.1.0` were replaced with those builds (old copies archived
+outside both app folders), and the `dcs-mcp-server` entry was removed from `~/.codex/config.toml`. Rerun: all four
+entries report server `dcs-sortie-mcp`, 198 tools, 50 calls with 0 failures, 0 validate errors, reopened intact.

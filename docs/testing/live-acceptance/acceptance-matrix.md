@@ -83,6 +83,7 @@ the app's own UI discovers the tools and its model uses them is a separate check
 | Codex (`codex mcp add` entry) | PASS | PARTIAL: mission built through the plugin-cache server and flown (20 Nov) | Smoke test; "Installed-client live run" |
 | ChatGPT local plugin | PASS | OPEN: the ChatGPT app's chat is recorded as not tested | Smoke test |
 
-Before a release check: rebuild and reinstall the `.mcpb` and the ChatGPT plugin (the installed
-copies are an older build; they report server name `dcs-mcp-server`), and remove the stale
-`dcs-mcp-server` npx entry from `~/.codex/config.toml`.
+Done 21 Nov: the `.mcpb` and ChatGPT plugin were rebuilt from this checkout and reinstalled in place, the stale
+`dcs-mcp-server` npx entry was removed from `~/.codex/config.toml`, and the smoke test was rerun: all four
+entries report `dcs-sortie-mcp`, 198 tools, 50/50 calls, reopened intact. Claude Desktop and Codex must be
+restarted to load the new copies.
