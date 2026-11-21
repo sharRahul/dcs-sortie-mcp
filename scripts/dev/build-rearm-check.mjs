@@ -35,7 +35,9 @@ const heliUnit = String(luaArray(asTable(findGroup(s.mission, "Huey-Rearm").grou
 const fuelMax = findUnitType("UH-1H")?.fuelMax ?? 631;
 setPayload(s.mission, heliUnit, { fuel: Math.round(fuelMax * 0.25), gun: 50 });
 addWaypoint(s.mission, "Huey-Rearm", { x: farp.x + 4000, y: farp.y + 4000, altitudeMetres: 200, speedMps: 45 });
-const landIdx = addWaypoint(s.mission, "Huey-Rearm", { x: farp.x, y: farp.y, altitudeMetres: 0, speedMps: 0, type: "Land", action: "Landing" });
+// Editor-saved FARP landings (ED campaign TAC11/TAC12) carry speed 41.67 m/s and BARO alt at ground level.
+// A speed-0 leg left the AI hovering near waypoint 2 in the first run.
+const landIdx = addWaypoint(s.mission, "Huey-Rearm", { x: fr.x ?? farp.x, y: fr.y ?? farp.y, altitudeMetres: 43, speedMps: 41.666666666667, type: "Land", action: "Landing" });
 const pts = asTable(asTable(findGroup(s.mission, "Huey-Rearm").group.route)?.points);
 const padId = asTable(pts?.[1])?.linkUnit;
 Object.assign(asTable(pts?.[landIdx]), { linkUnit: padId, helipadId: padId });

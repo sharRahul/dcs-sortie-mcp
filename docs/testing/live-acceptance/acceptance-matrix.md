@@ -63,7 +63,7 @@ that the files open; a full ME_OPEN check still needs every panel compared again
 | ATC silent mode for AI traffic | OPEN | Must be checked by ear; no scripting API reports ATC radio calls | — |
 | Into-wind runway choice | PASS | DCS briefing confirms the blow-toward convention | Depth sortie |
 | FARP cold start (AI helicopter) | PASS | — | Depth sortie |
-| FARP rearm/refuel | OPEN | 21 Nov attempt inconclusive: the AI did not land back on the pad (return waypoint). See "FARP refuel check (2026-11-21)" | verification.md |
+| FARP rearm/refuel | OPEN | 21 Nov: two runs, AI never lands back on the pad (hovers near Kutaisi, also with the editor's landing values); refuel unexercised. See "FARP refuel check (2026-11-21)" | verification.md |
 | Troop transport boarding | OPEN | Helicopters landed and lifted off; boarding not observed | Black Dagger |
 | Train, `big_smoke` rendering | OPEN | Train needs rail points; smoke is not scriptable | 0.6.3 run |
 | Carrier recovery, JTAC service | OPEN | Need a pilot | — |

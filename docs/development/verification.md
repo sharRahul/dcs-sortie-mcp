@@ -1421,3 +1421,13 @@ here. Next attempt should copy an editor-saved helicopter "Landing" at a FARP fi
 `gun` in the payload does nothing on a UH-1H (no internal gun; `getAmmo` = 0), so only fuel is measurable on
 this airframe. ATC silent mode for AI traffic was set up in the same mission (Senaki silenced, AI F-16s
 departed t=343/370) but is unverified: it can only be judged by ear.
+
+**Rerun with the editor's landing values (same day): still inconclusive.** The return point was rebuilt
+field-for-field like ED's own campaign FARP landings (TAC11/TAC12: `Land`/`Landing`, `linkUnit = helipadId =`
+pad unitId, BARO alt at ground level, speed 41.67 m/s) and the saved point was checked. The AI behaved
+exactly as in the first run: TAKEOFF t=221, then from t~510 a 26-38 m AGL hover until the run was stopped at
+t=1802 (fuel 0.25 -> 0.054). Both runs hovered at the SAME spot (x=-283964, y=685177): ~4.3 km from the pad and
+~1.4 km from Kutaisi's airfield centre, so the zero speed was not the cause. The AI appears to treat the
+landing as one at Kutaisi rather than at the pad. Not yet established: whether a FARP placed by this server is
+a DCS `Airbase` at runtime (`Airbase.getByName`) and which id DCS gives it, which a landing linked by
+`helipadId` needs to resolve. Refuelling remains unexercised.
