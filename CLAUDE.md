@@ -979,8 +979,12 @@ Three things that bite:
 
 `eventMonitoring.available=false` reproduced while `[DCSMCP] EVT` lines were in the log and
 a trigger's DO SCRIPT reached `DCSMCP`: the hook's `runIn("mission", …)` lands in state
-`server`, the mission scripts live in the trigger state, and the two share no globals. Not
-fixed — the probe's target state needs deciding, not guessing.
+`server`, the mission scripts live in the trigger state, and the two share no globals.
+Resolved by NOT reading the script's table at all: the hook installs its own
+`world.addEventHandler` observer (`DCSMCP_BRIDGE_EVENTS`, `installEventObserver`) in the
+scripting state on a sim frame. Verified live (docs/development/verification.md, "Live
+results"): `available=true, source=hook_observer, sourceState=server`, S_EVENT_DEAD at
+t=15.8, no duplicates on the cursor. Do not go back to probing for `DCSMCP`.
 
 A reactive wave must never be placed on top of another thing the mission tests:
 `Wave1-Armour` sat on the troop lift's pickup point and killed the lift at t=60, so the
@@ -1141,7 +1145,9 @@ with tests. The rules they leave behind:
   `ATC <group>: ...`; a second script for the same group is refused. Atomic (trig/trigrules/zones/dictionary restored).
   `dcs_scenario_generate` applies it to the player by default when the flight touches an airfield
   (`player.atc: false` opts out). Only oracle-backed predicates. F10 calls, not detection: no predicate for engine
-  start, no taxiway/threshold coordinates. Runway defaults to pydcs's first designator (wind NOT read). Dialogue is
+  start, no taxiway/threshold coordinates. Runway defaults to the end facing most nearly into `weather.wind.atGround`
+(stored blow-TOWARD, so +180; designator x 10 headings, magvar unknown); calm (<1 m/s) = pydcs's first designator.
+`scripts/dev/build-depth-sortie.mjs` builds the live check: player ATC + into-wind runway + FARP helo cold start, `[DEPTH]` log lines. Dialogue is
   fictional. Audio only from caller resource keys — never ship ED's ATC speech files. Unverified: whether silent mode
   also mutes the field for AI traffic; the F10 sequence, sounds, AGL handoff and zone prompts in flight.
 - Flyable vs AI-only (`mods.ts` `flyableTypes`/`playerFlyable`): a type is player-flyable only when a DEPLOYED

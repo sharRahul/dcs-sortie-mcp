@@ -18,7 +18,9 @@
  *
  * Dialogue is FICTIONAL brevity-style phrasing, not authenticated procedure. Frequencies
  * come from pydcs (`data/airfield-radio.json`); a runway the caller does not pass is the
- * first designator pydcs lists - wind is not read. Nothing here has been flown yet.
+ * runway end facing most nearly into the mission's surface wind (`weather.wind.atGround`,
+ * which DCS stores as the direction the wind blows TOWARD), or pydcs's first designator
+ * when the wind is calm. Nothing here has been flown yet.
  */
 import { z } from 'zod';
 import { addTrigger, addTriggerZone, findGroup, type ActionSpec, type ConditionSpec } from './authoring.js';
@@ -137,6 +139,22 @@ function landingAirdrome(points: LuaTable[]): number | undefined {
  * dictionary counter and dictionary are restored. Refuses a second script for the same
  * group (remove its "ATC <group>:" triggers first).
  */
+/** Surface wind as a FROM direction, or undefined when calm (< 1 m/s) or absent. */
+export function runwayWind(mission: LuaTable): { fromDeg: number; speedMs: number } | undefined {
+  const wind = asTable(asTable(asTable(mission.weather)?.wind)?.atGround);
+  const speed = Number(wind?.speed), dir = Number(wind?.dir);
+  if (!Number.isFinite(speed) || !Number.isFinite(dir) || speed < 1) return undefined;
+  return { fromDeg: ((dir + 180) % 360 + 360) % 360, speedMs: speed };
+}
+
+/** The runway end whose heading is closest to the wind's FROM direction (max headwind). */
+export function pickRunwayIntoWind<T extends { name: string; designatorHeading: number }>(ends: T[], windFromDeg: number): T | undefined {
+  const off = (h: number) => { const d = Math.abs(((h - windFromDeg) % 360 + 360) % 360); return d > 180 ? 360 - d : d; };
+  let best: T | undefined;
+  for (const e of ends) if (Number.isFinite(e.designatorHeading) && (!best || off(e.designatorHeading) < off(best.designatorHeading))) best = e;
+  return best ?? ends[0];
+}
+
 export function addFlightAtc(mission: LuaTable, groupName: string, input: z.input<typeof atcSchema>, dictionary?: LuaTable): AtcResult {
   const before = {
     trig: structuredClone(mission.trig), trigrules: structuredClone(mission.trigrules), triggers: structuredClone(mission.triggers),
@@ -179,10 +197,17 @@ function writeAtc(mission: LuaTable, g: string, spec: z.output<typeof atcSchema>
   const leadCallsign = asTable(lead.callsign)?.name;
   const cs = spec.callsign ?? (typeof leadCallsign === 'string' ? leadCallsign.replace(/^(\D+)(\d)(\d)$/, '$1 $2-$3') : g);
   const pickRunway = (radio: ReturnType<typeof airfieldRadio>, given: string | undefined, what: string) => {
-    const r = given ?? radio.runways[0]?.ends[0]?.name;
-    if (!r) throw new Error(`No runway designator known for ${radio.name}; pass ${what}.runway`);
-    if (!given) notes.push(`${what} runway ${r} is the first designator pydcs lists for ${radio.name}, not the runway in use for the mission wind: pass ${what}.runway to choose.`);
-    return r;
+    if (given) return given;
+    const ends = radio.runways.flatMap(rw => rw.ends);
+    if (!ends.length) throw new Error(`No runway designator known for ${radio.name}; pass ${what}.runway`);
+    const wind = runwayWind(mission);
+    if (!wind) {
+      notes.push(`${what} runway ${ends[0].name} is the first designator pydcs lists for ${radio.name} (surface wind calm or not set): pass ${what}.runway to choose.`);
+      return ends[0].name;
+    }
+    const best = pickRunwayIntoWind(ends, wind.fromDeg)!;
+    notes.push(`${what} runway ${best.name} faces most nearly into the surface wind from ${Math.round(wind.fromDeg)} degrees; runway headings are designator x 10 (magnetic, magvar not known), so a near-crosswind choice may differ from the editor's.`);
+    return best.name;
   };
 
   let awacsLabel: string | undefined;

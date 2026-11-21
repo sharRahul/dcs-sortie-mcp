@@ -1239,6 +1239,10 @@ with positive proof that the table is present and reachable from triggers. Not f
 right fix is to decide which state the probe should look in, and that needs its own
 investigation rather than a guess.
 
+**Resolved since:** the hook-owned observer (`installEventObserver`) registers its own
+world event handler in the scripting state, so nothing depends on the script's table.
+See "Live results" above: `available=true, source=hook_observer, sourceState=server`.
+
 ### A flaw in the test mission itself
 
 `Wave1-Armour` was placed at (65256, -250053) — exactly the troop lift's pickup waypoint,

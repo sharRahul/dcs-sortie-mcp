@@ -6,7 +6,7 @@ import path from "node:path";
 import { serializeLuaAssignment } from "../src/miz/serializer.js";
 import { asTable, luaArray, parseLuaAssignment, type LuaTable } from "../src/miz/lua.js";
 import { addAircraftGroup, addWaypoint, findGroup, newMissionTable } from "../src/miz/authoring.js";
-import { addFlightAtc } from "../src/miz/atc.js";
+import { addFlightAtc, pickRunwayIntoWind, runwayWind } from "../src/miz/atc.js";
 import { findAirport } from "../src/data/reference.js";
 import { flyableTypes, playerFlyable, scanModFolder } from "../src/dcs/mods.js";
 
@@ -51,6 +51,18 @@ test("full-sortie ATC: departure, AWACS, arrival; DCS ATC silenced at both field
   const back = parseLuaAssignment(serializeLuaAssignment("mission", m)) as LuaTable;
   assert.equal(luaArray(asTable(back.trigrules)).length, 13);
   assert.equal(compiled(back, "actions"), actions);
+});
+
+test("ATC picks the runway end facing into the surface wind", () => {
+  assert.equal(pickRunwayIntoWind([{ name: "07", designatorHeading: 70 }, { name: "25", designatorHeading: 250 }], 260)?.name, "25");
+  assert.equal(pickRunwayIntoWind([{ name: "36", designatorHeading: 360 }, { name: "18", designatorHeading: 180 }], 10)?.name, "36");
+  const m = playerMission("Kutaisi");
+  // DCS stores the direction the wind blows TOWARD: toward 70 = from 250.
+  (m as any).weather = { ...(asTable(m.weather) ?? {}), wind: { atGround: { speed: 6, dir: 70 }, at2000: { speed: 0, dir: 0 }, at8000: { speed: 0, dir: 0 } } };
+  const r = addFlightAtc(m, "Viper", { briefing: "x" });
+  assert.equal(r.departure?.runway, "25");
+  assert.ok(r.notes.some(n => /into the surface wind from 250/.test(n)));
+  assert.equal(runwayWind(m)?.fromDeg, 250);
 });
 
 test("ATC defaults the arrival from the Landing waypoint and refuses a second script", () => {
