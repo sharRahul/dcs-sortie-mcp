@@ -247,7 +247,7 @@ ${FULL_RULES}
  * must never be missed, most important first. tests/guide.test.ts holds it under 3800 characters (Claude Code cut the old text at character 4081).
  */
 export const SERVER_INSTRUCTIONS = `DCS World mission authoring (offline .miz) and live control of a running sim.
-BEFORE AUTHORING read resource dcs://guide/conventions (full rules) and dcs://skills/mission-production/checklist (what a mission needs, in build order, tool per item). Mission ideas: dcs://skills/mission-production/archetypes. Complete mission with evidence: prompt produce_mission / dcs://skills/mission-production.
+BEFORE AUTHORING read resource dcs://guide/conventions (full rules) and dcs://skills/mission-production/checklist (what a mission needs, in build order, tool per item). Mission ideas: dcs_tool_catalogue guide=archetypes [topic=<words>] (also resource dcs://skills/mission-production/archetypes). Complete mission with evidence: prompt produce_mission / dcs://skills/mission-production.
 
 Which tool:
 - Live or offline? dcs_bridge_status (phase must be "running" for live tools); after loading read dcs_get_log_errors.
