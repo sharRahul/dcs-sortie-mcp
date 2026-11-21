@@ -1459,3 +1459,30 @@ Reinstall (same day): `npm run bundle:build`/`bundle:verify` and `plugin:build`/
 extension folder and the Codex plugin cache `dcs-chatgpt/0.1.0` were replaced with those builds (old copies archived
 outside both app folders), and the `dcs-mcp-server` entry was removed from `~/.codex/config.toml`. Rerun: all four
 entries report server `dcs-sortie-mcp`, 198 tools, 50 calls with 0 failures, 0 validate errors, reopened intact.
+
+## Models choosing tools on their own: CLI clients (2026-11-21)
+
+Same plain request to both, with no tool names or hints: "A-10C, Cold War, Soviet tank push into Germany; give
+three ideas, recommend one, build it as a complete playable mission, save it." Each used the server as installed
+for that client.
+
+| | Codex CLI 0.167 (OpenAI model; Codex `dcs` entry + ChatGPT plugin) | Claude Code CLI 2.1.322 (Claude Desktop's `dcs` entry) |
+|---|---|---|
+| MCP calls / distinct tools | 52 / ~30 | 45 / ~22 (plus tool-search loads) |
+| Found the mission guide unprompted | yes: `dcs_tool_catalogue guide=archetypes topic=Fulda` (call 9) | yes: same call, `topic="Fulda Gap"` (call 3), plus the checklist resource |
+| Route taken | resources -> catalogue -> unit/loadout/service-date checks -> `dcs_production_create/generate` -> edits -> `production_revise/validate` | `dcs_scenario_validate/generate` -> edits -> `dcs_miz_validate` -> `save_as` |
+| Result | "Fulda Firebreak", GermanyCW, A-10C hot at Fritzlar | "Red Storm: Fulda Gap", GermanyCW, A-10C II hot at Frankfurt |
+| `verify-mission.mjs` (with DCS Lua, ME fix-up harness) | VERIFY OK | VERIFY OK |
+
+Friction found:
+- **ATC replace.** `dcs_scenario_generate` had already written the player's ATC script, so
+  `dcs_miz_configure_flight atc=...` refused a second one. Claude removed 12 `ATC Hawg 1:` triggers one call at a
+  time plus two zones before it could reconfigure. A way to replace the flight's own ATC in one call is missing.
+- **Scenario spec discoverability.** Codex also ran shell commands to read the plugin's own source for the
+  scenario specification shape. The tool schemas alone did not tell it enough.
+- **Client approval policy.** With Codex `approval_policy=never`, the destructive-annotated calls
+  (`dcs_miz_set_route`, `dcs_miz_remove_waypoint_task`) were refused by Codex, not by the server. An interactive
+  session would have asked.
+- `dcs_bridge_status` errored for Codex because DCS was not running; the model carried on offline correctly.
+
+Not established: the desktop apps themselves (Claude Desktop and ChatGPT desktop chats), and either mission flown.

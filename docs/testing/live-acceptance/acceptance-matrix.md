@@ -81,7 +81,7 @@ the app's own UI discovers the tools and its model uses them is a separate check
 | Claude Desktop (config entry) | PASS | PARTIAL: Claude Code acting as client built and flew a mission (20 Nov) | Smoke test; "Assistant-driven build" |
 | Claude Desktop (`.mcpb`) | PASS | PARTIAL: mission built through the installed bundle and flown (20 Nov); a plain brief typed into the app chat is recorded as not tested | Smoke test; "Installed-client live run" |
 | Codex (`codex mcp add` entry) | PASS | PARTIAL: mission built through the plugin-cache server and flown (20 Nov) | Smoke test; "Installed-client live run" |
-| ChatGPT local plugin | PASS | OPEN: the ChatGPT app's chat is recorded as not tested | Smoke test |
+| ChatGPT local plugin | PASS | PARTIAL: Codex CLI with the plugin picked tools and the guide unprompted and built a valid mission (21 Nov); the ChatGPT desktop chat is untested | Smoke test; "Models choosing tools" |
 
 Done 21 Nov: the `.mcpb` and ChatGPT plugin were rebuilt from this checkout and reinstalled in place, the stale
 `dcs-mcp-server` npx entry was removed from `~/.codex/config.toml`, and the smoke test was rerun: all four
