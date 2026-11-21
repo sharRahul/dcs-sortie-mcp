@@ -51,7 +51,7 @@ that the files open; a full ME_OPEN check still needs every panel compared again
 | Feature | Status | Passed live / still open | Evidence |
 |---|---|---|---|
 | Hook install, status phases, menu refusal | PASS | `phase` reported from the menu; loading a mission from the menu is refused | 16/17 Nov, results-2026-11-17 |
-| Runtime query from the menu | OPEN | 17 Nov: internal nil-reference instead of an actionable error. `dcs_bridge_status` now reports `phase`/`missionEnv` so a client can check first, but no re-test of `dcs_runtime_inspect` from the menu is recorded | results-2026-11-17 |
+| Runtime query from the menu | SUPERSEDED → PASS | 17 Nov: internal nil-reference. 21 Nov: still failing at first, then fixed: refuses with "no mission is running", verified live | "Runtime query from the menu (2026-11-21)" |
 | Event monitoring | SUPERSEDED → PASS | 17 Nov: `available=false`. Fixed by the hook observer (`source=hook_observer`) | "eventMonitoring" + "Resolved since" |
 | Mission swap via `dcs_load_mission` | OPEN (DCS limit) | `net.load_mission` does nothing in single player started from `DCS.exe <miz>`; relaunching DCS is the working route | "Installed-client live run" |
 | Paused-runtime contract | OPEN | 17 Nov: returned frozen state where the test plan expects an unavailable error | results-2026-11-17 |

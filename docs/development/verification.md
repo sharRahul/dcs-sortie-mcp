@@ -1446,3 +1446,11 @@ The FARP was moved 12 km from Kutaisi, and three AI UH-1Hs flew in one run, with
   0.440 from t=302 to t=902, and B's and C's were also flat. An AI helicopter parked at a serviced FARP is not
   refuelled within 10 min. What would make DCS service AI there (a mission re-tasking, a takeoff from it, or
   only player requests) is not established. Player rearm/refuel through the ground crew is untested.
+
+## Runtime query from the menu (2026-11-21)
+
+Re-test of the 17 Nov failure: with DCS at the main menu (`phase: menu`), `dcs_runtime_inspect` still returned
+`attempt to index field 'mission' (a nil value)`. The hook's `runtime` handler now refuses unless
+`phase == "running"`, as `loadmission` already did: "runtime: no mission is running (phase 'menu') ...".
+Regression: `tests/fixtures/hook-load.lua` `RUNTIME_MENU_REFUSED`. Installed into Saved Games, DCS restarted, and
+the call from the menu returned that message live.

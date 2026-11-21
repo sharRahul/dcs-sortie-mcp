@@ -614,6 +614,12 @@ end
 -- Read-only bounded snapshot. The observer is installed at mission start, not by reads.
 function handlers.runtime(args)
   args = args or {}
+  -- Verified 2026-11-21: from the menu the snippet below hit `env.mission` = nil and returned an
+  -- internal error. Say what is wrong instead.
+  if missionState.phase ~= "running" then
+    return fail("runtime: no mission is running (phase '" .. tostring(missionState.phase) .. "'). " ..
+      "Start a mission, wait for dcs_bridge_status phase 'running', then retry.")
+  end
   local flags, names = {}, {}
   for i, value in ipairs(args.flags or {}) do
     if i > 100 or type(value) ~= "number" and type(value) ~= "string" or #tostring(value) > 64 then return fail("runtime: invalid flags (max 100)") end

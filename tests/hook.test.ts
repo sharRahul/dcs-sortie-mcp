@@ -65,7 +65,7 @@ test(
       }
     }
 
-    assert.equal(replies.length, 14, `expected 14 replies, got:\n${output}`);
+    assert.equal(replies.length, 15, `expected 15 replies, got:\n${output}`);
     assert.match(replies[0], /^\{"ok":true,"data":\{"pong":true/, "ping did not answer");
     assert.match(replies[1], /^\{"ok":true,/, "mission query did not answer");
     // Mission-env commands go to the state that actually holds `timer`
@@ -96,6 +96,7 @@ test(
     // From the menu net.load_mission silently no-ops, so loadmission must refuse
     // with a clear error and must NOT call net.load_mission.
     assert.match(output, /COLD_MENU_REFUSED true/, `cold-menu loadmission did not refuse clearly:\n${output}`);
+    assert.match(output, /RUNTIME_MENU_REFUSED true/, `runtime from the menu did not refuse clearly:\n${output}`);
     assert.match(output, /COLD_MENU_NO_LOAD true/, `cold-menu loadmission still called net.load_mission:\n${output}`);
     // ...but the bridge must still answer non-mission commands in the menus.
     assert.match(output, /GUI_PING_ANSWERED true/, `ping did not answer from the GUI tick:\n${output}`);

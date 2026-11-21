@@ -280,6 +280,14 @@ local coldReply = sent[#sent] or ""
 print("COLD_MENU_REFUSED " .. tostring(coldReply:find('"ok":false', 1, true) ~= nil and coldReply:find("no mission is running", 1, true) ~= nil))
 print("COLD_MENU_NO_LOAD " .. tostring(#loadMissionCalls == callsBefore))
 
+-- runtime from the menu used to reach `env.mission` (nil there) and return an internal error.
+before = #sent
+queuedRequest = '{"cmd":"runtime","groups":["X"]}'
+guiCallback()
+userCallbacks.onSimulationFrame()
+local rtReply = sent[#sent] or ""
+print("RUNTIME_MENU_REFUSED " .. tostring(#sent > before and rtReply:find('"ok":false', 1, true) ~= nil and rtReply:find("no mission is running", 1, true) ~= nil))
+
 -- --- structured mission-environment commands -------------------------------
 --
 -- Each of these builds Lua as a string and ships it into the mission state, so
