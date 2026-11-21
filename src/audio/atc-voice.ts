@@ -42,6 +42,14 @@ export async function writeFlightAtc(s: Store, group: string, input: z.input<typ
   const notes: string[] = [];
   const dir = await mkdtemp(path.join(tmpdir(), 'dcs-atc-voice-'));
   const safe = group.replace(/[^A-Za-z0-9_-]+/g, '_').slice(0, 40) || 'flight';
+  // replace: the old script's spoken lines go with it (found live: a model deleted 17 atc_<group>_*.ogg one call
+  // at a time before a voiced replace could embed new ones). Restored if anything below fails.
+  const dropped: [string, string, Buffer | undefined][] = [];
+  if (spec.replace) for (const [key, f] of Object.entries(s.mapResource)) {
+    if (!String(f).startsWith(`atc_${safe}_`)) continue;
+    dropped.push([key, String(f), s.files.get(String(f))]); delete s.mapResource[key]; s.files.delete(String(f));
+  }
+  const restore = () => { for (const [key, f, b] of dropped) { s.mapResource[key] = f; if (b) s.files.set(f, b); } };
   let provider = '';
   try {
     for (const [step, text] of Object.entries(dry.lines) as [AtcAudioStep, string][]) {
@@ -57,6 +65,7 @@ export async function writeFlightAtc(s: Store, group: string, input: z.input<typ
     }
   } catch (e) {
     for (const key of added) { const f = String(s.mapResource[key]); delete s.mapResource[key]; s.files.delete(f); }
+    restore();
     return dcsAtc(s, group, spec, `Voice generation failed (${(e as Error).message})`);
   } finally { await rm(dir, { recursive: true, force: true }); }
   const result = addFlightAtc(s.mission, group, { ...spec, audio }, s.dictionary);

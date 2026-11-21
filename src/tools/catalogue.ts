@@ -1,14 +1,38 @@
 import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { z } from 'zod';
-import { readFile } from 'node:fs/promises';
+import { readdir, readFile } from 'node:fs/promises';
+import path from 'node:path';
 import { buildResult } from './format.js';
 import { packagePath } from '../paths.js';
 
 /** The mission-production guides, served through this tool as well as resources: some clients never let the model read a resource. */
 const GUIDES = { archetypes: 'mission-archetypes.md', checklist: 'mission-content.md' } as const;
 
+/**
+ * guide=scenario: the shipped example specifications for dcs_scenario_validate/generate. No topic = the examples
+ * README (what each one is, how to use them) plus the file list; topic = the full JSON of the example whose file
+ * name or "name" field matches every word. Found live: a model read the plugin's source to learn the spec shape.
+ */
+export async function readScenarioGuide(topic = ''): Promise<{ guide: string; topic?: string; sections: string[]; text: string }> {
+  const dir = packagePath('examples', 'scenarios');
+  const files = (await readdir(dir)).filter(f => f.endsWith('.json')).sort();
+  const words = topic.toLowerCase().split(/\s+/).filter(Boolean);
+  if (!words.length) {
+    const readme = await readFile(path.join(dir, 'README.md'), 'utf8');
+    return { guide: 'scenario', sections: files, text: `${readme}\n\nFull example specifications: dcs_tool_catalogue guide=scenario topic=<file or mission name>. Files: ${files.join(', ')}` };
+  }
+  for (const f of files) {
+    const text = await readFile(path.join(dir, f), 'utf8');
+    let name = '';
+    try { name = String((JSON.parse(text) as { name?: unknown }).name ?? ''); } catch { /* listed by file name only */ }
+    if (words.every(w => `${f} ${name}`.toLowerCase().includes(w))) return { guide: 'scenario', topic, sections: files, text };
+  }
+  throw new Error(`No scenario example matches '${topic}'. Files: ${files.join(', ')}`);
+}
+
 /** One guide, or the `### ` section of it that best matches every word of `topic` (heading first, then body). */
-export async function readGuide(guide: keyof typeof GUIDES, topic = ''): Promise<{ guide: string; topic?: string; sections: string[]; text: string }> {
+export async function readGuide(guide: keyof typeof GUIDES | 'scenario', topic = ''): Promise<{ guide: string; topic?: string; sections: string[]; text: string }> {
+  if (guide === 'scenario') return readScenarioGuide(topic);
   const text = await readFile(packagePath('skills', 'dcs-mission-production', 'references', GUIDES[guide]), 'utf8');
   const lines = (x: string) => x.split(/\r?\n/);
   const parts = text.split(/\r?\n(?=### )/);
@@ -38,8 +62,8 @@ export function captureCatalogue(server: McpServer, selected?: Set<string>) {
 }
 export function registerCatalogueTool(server: McpServer, entries: Map<string, CatalogueEntry>) {
   server.registerTool('dcs_tool_catalogue', {
-    title: 'Find DCS Sortie MCP tools', description: 'Search the complete registered tool catalogue by name/description. Paginated summaries and capability annotations help discover composable tools without duplicating wrappers. Standard MCP tools/list remains unchanged. guide=archetypes returns the mission-type recipes (deep interdiction, Fulda Gap, emergency CAS, SEAD, scramble, fleet defense, CAP, escort, convoy/SCUD hunt, helicopter ops, strike package, historical, night); add topic=<words> for one recipe. guide=checklist returns the build-order checklist.',
-    inputSchema: z.object({ guide: z.enum(['archetypes', 'checklist']).optional(), topic: z.string().max(200).default(''), query: z.string().max(200).default(''), offset: z.number().int().nonnegative().default(0), limit: z.number().int().min(1).max(50).default(20) }).strict(),
+    title: 'Find DCS Sortie MCP tools', description: 'Search the complete registered tool catalogue by name/description. Paginated summaries and capability annotations help discover composable tools without duplicating wrappers. Standard MCP tools/list remains unchanged. guide=archetypes returns the mission-type recipes (deep interdiction, Fulda Gap, emergency CAS, SEAD, scramble, fleet defense, CAP, escort, convoy/SCUD hunt, helicopter ops, strike package, historical, night); add topic=<words> for one recipe. guide=checklist returns the build-order checklist. guide=scenario returns the example specifications for dcs_scenario_validate/generate (topic=<name> for one full JSON to copy and edit).',
+    inputSchema: z.object({ guide: z.enum(['archetypes', 'checklist', 'scenario']).optional(), topic: z.string().max(200).default(''), query: z.string().max(200).default(''), offset: z.number().int().nonnegative().default(0), limit: z.number().int().min(1).max(50).default(20) }).strict(),
     annotations: { readOnlyHint: true, openWorldHint: false },
   }, async ({ guide, topic, query, offset, limit }) => {
     if (guide) {

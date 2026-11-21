@@ -23,7 +23,7 @@
  * when the wind is calm. Nothing here has been flown yet.
  */
 import { z } from 'zod';
-import { addTrigger, addTriggerZone, findGroup, type ActionSpec, type ConditionSpec } from './authoring.js';
+import { addTrigger, addTriggerZone, findGroup, removeTrigger, type ActionSpec, type ConditionSpec } from './authoring.js';
 import { asTable, luaArray, type LuaTable } from './lua.js';
 import { allocateFlags } from './scoring.js';
 import { airfieldRadio } from '../data/airfield-radio.js';
@@ -99,7 +99,28 @@ export const atcSchema = z.object({
   /** Seconds between a pilot call and the controller's reply. */
   replyDelaySeconds: z.number().int().min(0).max(30).default(4),
   messageSeconds: z.number().int().positive().max(120).default(12),
+  /**
+   * Replace this flight's existing ATC script (its `ATC <group>:` triggers and zones) instead of refusing.
+   * Found live: a model reconfiguring ATC after dcs_scenario_generate had to delete 12 triggers one call at a time.
+   */
+  replace: z.boolean().default(false),
 }).strict();
+
+/**
+ * Remove the ATC script this module wrote for `group`: every trigger whose comment starts `ATC <group>:`
+ * (highest index first, through removeTrigger so later triggers are renumbered and recompiled) and every
+ * zone named that way. Dictionary text and embedded audio of the old script are left in place (unreferenced).
+ */
+export function removeFlightAtc(mission: LuaTable, group: string): { triggers: number; zones: string[] } {
+  const prefix = COMMENT(group);
+  const indexes = luaArray(asTable(mission.trigrules)).map((r, i) => String(r.comment ?? '').startsWith(prefix) ? i + 1 : 0).filter(Boolean);
+  for (const i of indexes.reverse()) removeTrigger(mission, i);
+  const table = asTable(mission.triggers);
+  const all = luaArray(asTable(table?.zones));
+  const gone = all.filter(z => String(z.name ?? '').startsWith(prefix)).map(z => String(z.name));
+  if (table && gone.length) table.zones = Object.fromEntries(all.filter(z => !gone.includes(String(z.name))).map((z, i) => [i + 1, z]));
+  return { triggers: indexes.length, zones: gone };
+}
 
 export interface AtcResult {
   group: string;
@@ -175,7 +196,8 @@ function writeAtc(mission: LuaTable, g: string, spec: z.output<typeof atcSchema>
   const found = findGroup(mission, g);
   if (!found || (found.category !== 'plane' && found.category !== 'helicopter')) throw new Error(`No aircraft group named '${g}' in this mission`);
   if (luaArray(asTable(mission.trigrules)).some(r => String(r.comment ?? '').startsWith(COMMENT(g)))) {
-    throw new Error(`'${g}' already has an ATC script: remove its '${COMMENT(g)}' triggers (dcs_miz_list_triggers / dcs_miz_remove_trigger) before writing a new one`);
+    if (!spec.replace) throw new Error(`'${g}' already has an ATC script: pass atc.replace=true to replace it in one call (or remove its '${COMMENT(g)}' triggers and zones yourself)`);
+    removeFlightAtc(mission, g);
   }
   const units = luaArray(asTable(found.group.units));
   const lead = units[0];

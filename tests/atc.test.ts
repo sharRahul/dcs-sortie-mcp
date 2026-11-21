@@ -5,8 +5,8 @@ import { tmpdir } from "node:os";
 import path from "node:path";
 import { serializeLuaAssignment } from "../src/miz/serializer.js";
 import { asTable, luaArray, parseLuaAssignment, type LuaTable } from "../src/miz/lua.js";
-import { addAircraftGroup, addWaypoint, findGroup, newMissionTable } from "../src/miz/authoring.js";
-import { addFlightAtc, pickRunwayIntoWind, runwayWind } from "../src/miz/atc.js";
+import { addAircraftGroup, addTrigger, addWaypoint, findGroup, newMissionTable } from "../src/miz/authoring.js";
+import { addFlightAtc, pickRunwayIntoWind, removeFlightAtc, runwayWind } from "../src/miz/atc.js";
 import { findAirport } from "../src/data/reference.js";
 import { flyableTypes, playerFlyable, scanModFolder } from "../src/dcs/mods.js";
 
@@ -76,6 +76,26 @@ test("ATC defaults the arrival from the Landing waypoint and refuses a second sc
   assert.equal(JSON.stringify(m), before);
 });
 
+test("atc.replace swaps the flight's own script in one call and leaves other triggers working", () => {
+  const m = playerMission("Senaki-Kolkhi"), dict: LuaTable = {};
+  addFlightAtc(m, "Viper", { callsign: "Viper 1-1", briefing: "first", departure: { runway: "07" } }, dict);
+  addTrigger(m, { type: "once", comment: "Other", conditions: [{ kind: "time_after", seconds: 5 }], actions: [{ kind: "set_flag", flag: 77 }] }, dict);
+  const before = luaArray(asTable(m.trigrules)).length;
+  const r = addFlightAtc(m, "Viper", { callsign: "Viper 1-1", briefing: "second", departure: { runway: "25" }, replace: true }, dict);
+  const rules = luaArray(asTable(m.trigrules));
+  assert.equal(rules.length, before);
+  assert.equal(rules.filter(x => String(x.comment) === "Other").length, 1);
+  assert.equal(rules.filter(x => String(x.comment).startsWith("ATC Viper:")).length, r.triggers.length);
+  assert.equal(r.departure?.runway, "25");
+  assert.equal(luaArray(asTable(asTable(m.triggers)?.zones)).length, 2);
+  assert.match(compiled(m, "actions"), /c_flag|a_set_flag\(77/);
+  const back = parseLuaAssignment(serializeLuaAssignment("mission", m)) as LuaTable;
+  assert.equal(luaArray(asTable(back.trigrules)).length, before);
+  const m2 = removeFlightAtc(m, "Viper");
+  assert.equal(m2.zones.length, 2);
+  assert.equal(luaArray(asTable(m.trigrules)).map(x => String(x.comment)).join(), "Other");
+});
+
 test("ATC is atomic: a failure leaves triggers, zones and the dictionary untouched", () => {
   const m = playerMission("Senaki-Kolkhi"), dict: LuaTable = {};
   const before = JSON.stringify(m);
@@ -136,4 +156,19 @@ test("voice=false keeps the explicit text-only scripted ATC", async () => {
   const r = await writeFlightAtc(s, "Viper", { briefing: "x", voice: false });
   assert.deepEqual(r.silenced, ["Kutaisi"]);
   assert.ok(r.triggers.length > 5);
+});
+
+test("voiced atc.replace drops the old script's embedded lines instead of colliding with them", async (t) => {
+  const { speechAvailable } = await import("../src/audio/speech.js");
+  if (!(await speechAvailable("windows")).ok) { t.skip("no Windows voice or FFmpeg here"); return; }
+  const { writeFlightAtc } = await import("../src/audio/atc-voice.js");
+  const s = { mission: playerMission("Kutaisi"), dictionary: {} as LuaTable, mapResource: {} as LuaTable, files: new Map<string, Buffer>() };
+  await writeFlightAtc(s, "Viper", { briefing: "first", voice: { provider: "windows" } });
+  const first = Object.values(s.mapResource).map(String).filter(f => f.startsWith("atc_Viper_"));
+  assert.ok(first.length > 5);
+  const r = await writeFlightAtc(s, "Viper", { briefing: "second", voice: { provider: "windows" }, replace: true });
+  const second = Object.values(s.mapResource).map(String).filter(f => f.startsWith("atc_Viper_"));
+  assert.equal(second.length, first.length);
+  assert.equal(s.files.size, Object.keys(s.mapResource).length);
+  assert.ok(r.notes.some(n => /Spoken lines generated/.test(n)), r.notes.join("\n"));
 });

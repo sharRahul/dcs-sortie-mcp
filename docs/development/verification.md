@@ -1486,3 +1486,14 @@ Friction found:
 - `dcs_bridge_status` errored for Codex because DCS was not running; the model carried on offline correctly.
 
 Not established: the desktop apps themselves (Claude Desktop and ChatGPT desktop chats), and either mission flown.
+
+**Fixes and rerun (same day).** `atc.replace=true` on create/configure_flight swaps a flight's own ATC
+script (triggers, zones and, when voiced, its embedded `atc_<group>_*.ogg` lines) in one call;
+`dcs_tool_catalogue guide=scenario [topic]` returns the shipped example specifications, and the scenario tool
+descriptions point to it. Both CLIs were rerun with the same prompt on the reinstalled server:
+- Codex: called `guide=scenario topic=cas-a10c` itself, no longer read the plugin's source, and used
+  `atc.replace=true` for all four ATC reconfigurations, all accepted. Mission VERIFY OK.
+- Claude: used `guide=archetypes`, `guide=scenario` and `atc.replace=true` (no trigger-by-trigger deletion). It
+  then deleted 17 old voice files one call at a time before a voiced replace could embed new ones; that is what
+  the audio half of `replace` now does (test `voiced atc.replace drops the old script's embedded lines`, run with
+  real Windows voices). The CLI was not rerun after that last fix. Mission VERIFY OK.
