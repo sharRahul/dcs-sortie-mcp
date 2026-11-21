@@ -210,7 +210,13 @@ export interface PopulateAirfieldArgs {
   airfield: string | number;
   /** Static types to park, used in turn (aircraft, vehicles or static objects). */
   types: string[];
-  count: number;
+  /**
+   * How many to park. Default for aircraft: enough to bring the airfield to the corpus median
+   * occupancy (TYPICAL_OCCUPANCY); required for other types.
+   */
+  count?: number;
+  /** Fraction of the airfield's aircraft slots that may be occupied, flights included. Default MAX_OCCUPANCY. */
+  maxOccupancy?: number;
   /** Name prefix; objects are named `<prefix>-1`, `<prefix>-2`, ... */
   namePrefix: string;
   /** Only shelters, only open slots, or any (default). */
@@ -251,6 +257,43 @@ export interface PopulateAirfieldResult {
   support: { name: string; type: string; slot: string }[];
   /** Free slots left after placement (any type). */
   freeSlotsLeft: number;
+  /** Support objects not placed because they would sit on a parking slot or another object. */
+  supportSkipped: number;
+  /** Set when the occupancy cap cut the requested count. */
+  capped?: { requested: number; placed: number; maxOccupancy: number };
+}
+
+/**
+ * Share of an airfield's aircraft parking slots occupied in editor-saved missions:
+ * 4235 airfield instances (>= 10 aircraft slots, >= 4 used) across ~3000 ME-saved missions,
+ * p25 0.10, median 0.17, p75 0.29, p90 0.38. Filling every slot is not what mission
+ * makers do, and it leaves no room for ground support or for flights to spawn.
+ */
+export const TYPICAL_OCCUPANCY = 0.17;
+export const MAX_OCCUPANCY = 0.38;
+
+/** Positions of every unit and static already in the mission. */
+function objectPoints(mission: LuaTable): [number, number][] {
+  const out: [number, number][] = [];
+  for (const side of Object.values(asTable(mission.coalition) ?? {})) for (const c of luaArray(asTable(asTable(side)?.country)))
+    for (const k of ['static', 'vehicle', 'plane', 'helicopter', 'ship']) for (const g of luaArray(asTable(asTable(c[k])?.group)))
+      for (const u of luaArray(asTable(g.units))) { const x = Number(u.x), y = Number(u.y); if (Number.isFinite(x) && Number.isFinite(y)) out.push([x, y]); }
+  return out;
+}
+
+/** First clear spot: the kit position, then further back, then nudged sideways. */
+function kitSpot(slots: ParkingSlotTuple[], pts: [number, number][], x0: number, y0: number, fwd: number[], right: number[], f: number, r: number): [number, number] | undefined {
+  for (const [df, dr] of [[0, 0], [-8, 0], [-16, 0], [0, 4], [0, -4], [-8, 4], [-8, -4]]) {
+    const x = x0 + fwd[0] * (f + df) + right[0] * (r + dr), y = y0 + fwd[1] * (f + df) + right[1] * (r + dr);
+    if (clearSpot(slots, pts, x, y)) return [x, y];
+  }
+  return undefined;
+}
+
+/** Clear of every parking slot's footprint and of every object already there (6 m). */
+function clearSpot(slots: ParkingSlotTuple[], pts: [number, number][], x: number, y: number): boolean {
+  if (slots.some(s => Math.hypot(s[2] - x, s[3] - y) < Math.max(Number(s[6]) || 0, Number(s[5]) || 0, 10) / 2 + 2)) return false;
+  return !pts.some(p => Math.hypot(p[0] - x, p[1] - y) < 6);
 }
 
 /**
@@ -264,13 +307,23 @@ export function populateAirfield(mission: LuaTable, args: PopulateAirfieldArgs):
   const airport = findAirport(theatreName, args.airfield);
   if (!args.types.length) throw new Error("Give at least one type to park.");
   const taken = occupiedParking(mission, airport);
+  const pts = objectPoints(mission);
+  let supportSkipped = 0;
+  const aircraftSlots = airport.slots.filter(s => (s[4] & 6) !== 0).length || airport.slots.length;
+  const maxOcc = args.maxOccupancy ?? MAX_OCCUPANCY;
+  const firstKind = findUnitType(args.types[0] ?? '');
+  const parkingAircraft = firstKind?.category === 'plane' || firstKind?.category === 'helicopter';
+  const requested = args.count ?? (parkingAircraft ? Math.max(1, Math.round(TYPICAL_OCCUPANCY * aircraftSlots) - taken.size) : undefined);
+  if (requested === undefined) throw new Error('count is required unless the types are aircraft');
+  const room = Math.max(0, Math.floor(maxOcc * aircraftSlots) - taken.size);
+  const count = parkingAircraft ? Math.min(requested, room) : requested;
   const placed: PopulateAirfieldResult["placed"] = [];
   const support: PopulateAirfieldResult["support"] = [];
 
   const slotFilter = (s: ParkingSlotTuple) =>
     args.slots === "shelters" ? (s[4] & 8) !== 0 : args.slots === "open" ? (s[4] & 8) === 0 : true;
 
-  for (let i = 0; i < args.count; i++) {
+  for (let i = 0; i < count; i++) {
     const type = args.types[i % args.types.length];
     const kind = findUnitType(type);
     if (!kind) throw new Error(`Unknown type '${type}'. Find one with dcs_list_unit_types.`);
@@ -304,6 +357,7 @@ export function populateAirfield(mission: LuaTable, args: PopulateAirfieldArgs):
       dead: args.dead,
     });
     placed.push({ name, type, slot: slot[1] });
+    pts.push([slot[2], slot[3]]);
     const isAircraft = kind.category === "plane" || kind.category === "helicopter";
     if (isAircraft && !args.dead && args.support !== false) {
       // Behind the tail (the object faces the reference point), spread across the slot.
@@ -314,16 +368,18 @@ export function populateAirfield(mission: LuaTable, args: PopulateAirfieldArgs):
         { t: kit.vehicles[i % kit.vehicles.length], f: -back - 10, r: 0 }];
       items.forEach(({ t, f, r }, k) => {
         const sname = `${name}-svc-${k + 1}`;
-        addStatic(mission, {
-          side: args.side, country: args.country, countryId: args.countryId, name: sname, type: t,
-          x: slot![2] + fwd[0] * f + right[0] * r, y: slot![3] + fwd[1] * f + right[1] * r, heading,
-        });
+        const spot = kitSpot(airport.slots, pts, slot![2], slot![3], fwd, right, f, r);
+        if (!spot) { supportSkipped++; return; }
+        const [x, y] = spot;
+        pts.push([x, y]);
+        addStatic(mission, { side: args.side, country: args.country, countryId: args.countryId, name: sname, type: t, x, y, heading });
         support.push({ name: sname, type: t, slot: slot![1] });
       });
     }
   }
   const freeSlotsLeft = airport.slots.filter((s) => !taken.has(s[1]) && slotFilter(s)).length;
-  return { airfield: airport.name, placed, support, freeSlotsLeft };
+  return { airfield: airport.name, placed, support, supportSkipped, freeSlotsLeft,
+    ...(parkingAircraft && requested > count ? { capped: { requested, placed: placed.length, maxOccupancy: maxOcc } } : {}) };
 }
 
 // ---------------------------------------------------------------------------
@@ -829,12 +885,20 @@ export function addFlightRampSupport(mission: LuaTable, groupName: string, side:
   if (!(Number(p1?.airdromeId) > 0) || !/Parking/.test(String(p1?.type ?? ''))) return [];
   const kit = AIRFIELD_SUPPORT_KITS[side === "red" ? "red" : "blue"];
   const names: string[] = [];
+  const theatreName = resolveTheatreName(String(mission["theatre"] ?? ""));
+  let slots: ParkingSlotTuple[] = [];
+  try { if (theatreName) slots = findAirport(theatreName, Number(p1!.airdromeId)).slots; } catch { /* unbundled: object check only */ }
+  const pts = objectPoints(mission);
   luaArray(asTable(found.group.units)).forEach((u, i) => {
     const h = Number(u.heading) || 0, fwd = [Math.cos(h), Math.sin(h)], right = [-Math.sin(h), Math.cos(h)];
     const items = [...kit.statics.map((t, k) => ({ t, f: -13, r: (k - 1) * 6 })), { t: kit.vehicles[i % kit.vehicles.length], f: -23, r: 0 }];
     items.forEach(({ t, f, r }, k) => {
       const name = `${groupName}-${i + 1}-svc-${k + 1}`;
-      addStatic(mission, { side, country, name, type: t, x: Number(u.x) + fwd[0] * f + right[0] * r, y: Number(u.y) + fwd[1] * f + right[1] * r, heading: h / DEG });
+      const spot = kitSpot(slots, pts, Number(u.x), Number(u.y), fwd, right, f, r);
+      if (!spot) return;
+      const [x, y] = spot;
+      pts.push([x, y]);
+      addStatic(mission, { side, country, name, type: t, x, y, heading: h / DEG });
       names.push(name);
     });
   });

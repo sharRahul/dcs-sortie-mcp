@@ -102,17 +102,24 @@ export function registerMizDressingTools(server: McpServer): void {
         "so it looks operational or gives a strike something to hit (dead=true parks wrecks). Slot positions " +
         "come from DCS's own airfield data; aircraft go only on slots they fit. Slots used by flights in this " +
         "mission are skipped, and later flights skip these statics. Without heading, each object faces the " +
-        "airfield reference point (the parking data has no slot orientation).\n\n" +
-        "Args: sessionId, side, country, airfield (name or id), types (list, used in turn), count, namePrefix, " +
-        "slots? ('any'|'shelters'|'open'), heading?, dead?\n\n" +
-        "Returns JSON: { airfield, placed: [{ name, type, slot }], support: [{ name, type, slot }], freeSlotsLeft }.",
+        "airfield reference point (the parking data has no slot orientation). Editor-saved missions occupy a median " +
+        "17% (p90 38%) of an airfield's aircraft slots, so for aircraft count defaults to the median and maxOccupancy " +
+        "(default 0.38, flights included) caps it; capped reports a cut. support (default true) adds ground support next " +
+        "to each parked aircraft - the types editor-saved missions use most beside parked aircraft (blue: FireExtinguisher02, " +
+        "GeneratorF, Ladder, M978 HEMTT Tanker/Hummer; red: FireExtinguisher02, GeneratorF, ammo_cargo, ATZ-10/Ural-4320 " +
+        "APA-5D). Offsets are our convention; an object that would sit on any parking slot or within 6 m of another " +
+        "object is skipped (supportSkipped). Taxiways and buildings are not in the data and are not checked.\n\n" +
+        "Args: sessionId, side, country, airfield (name or id), types (list, used in turn), count?, maxOccupancy?, namePrefix, " +
+        "slots? ('any'|'shelters'|'open'), heading?, dead?, support?\n\n" +
+        "Returns JSON: { airfield, placed, support: [{ name, type, slot }], supportSkipped, capped?, freeSlotsLeft }.",
       inputSchema: z
         .object({
           sessionId: sessionIdField,
           ...countryFields,
           airfield: z.union([z.string().min(1), z.number().int()]),
           types: z.array(z.string().min(1)).min(1).max(20),
-          count: z.number().int().min(1).max(200),
+          count: z.number().int().min(1).max(200).optional(),
+          maxOccupancy: z.number().min(0.01).max(1).default(0.38),
           namePrefix: z.string().min(1).max(48),
           slots: z.enum(["any", "shelters", "open"]).default("any"),
           heading: z.number().min(0).max(360).optional(),
@@ -125,6 +132,8 @@ export function registerMizDressingTools(server: McpServer): void {
         placed: z.array(z.object({ name: z.string(), type: z.string(), slot: z.string() })),
         support: z.array(z.object({ name: z.string(), type: z.string(), slot: z.string() })),
         freeSlotsLeft: z.number(),
+        supportSkipped: z.number(),
+        capped: z.object({ requested: z.number(), placed: z.number(), maxOccupancy: z.number() }).optional(),
       }),
       annotations,
     },
@@ -134,7 +143,7 @@ export function registerMizDressingTools(server: McpServer): void {
         const { sessionId: _s, ...args } = a;
         const r = populateAirfield(s.mission, args);
         touched(s);
-        const short = r.placed.length < a.count ? ` Only ${r.placed.length} of ${a.count} fit — no more suitable free slots.` : "";
+        const short = r.capped ? ` Capped at ${r.capped.placed} of ${r.capped.requested}: maxOccupancy ${r.capped.maxOccupancy} of the aircraft slots.` : a.count !== undefined && r.placed.length < a.count ? ` Only ${r.placed.length} of ${a.count} fit — no more suitable free slots.` : "";
         return buildResult(`Parked ${r.placed.length} static(s) at ${r.airfield}.${short}`, { ...r });
       } catch (err) {
         return errorResult(err);

@@ -136,7 +136,7 @@ test("parked aircraft get the corpus-derived ground support kit behind the tail;
   const m = newMissionTable("Caucasus", 43200);
   const r = populateAirfield(m, { side: "blue", country: "USA", airfield: "Kutaisi", types: ["F-16C_50"], count: 2, namePrefix: "Ramp" });
   assert.equal(r.placed.length, 2);
-  assert.deepEqual(r.support.map(s => s.type), ["FireExtinguisher02", "GeneratorF", "Ladder", "M978 HEMTT Tanker", "FireExtinguisher02", "GeneratorF", "Ladder", "Hummer"]);
+  assert.deepEqual([...new Set(r.support.map(s => s.type))].sort(), ["FireExtinguisher02", "GeneratorF", "Hummer", "Ladder", "M978 HEMTT Tanker"]);
   const red = populateAirfield(m, { side: "red", country: "Russia", airfield: "Kutaisi", types: ["Su-25"], count: 1, namePrefix: "Rr" });
   assert.ok(red.support.some(s => s.type === "ATZ-10"));
   assert.equal(populateAirfield(m, { side: "blue", country: "USA", airfield: "Kutaisi", types: ["F-16C_50"], count: 1, namePrefix: "W", dead: true }).support.length, 0);
@@ -149,4 +149,24 @@ test("a parking-start flight gets ramp support; an air start does not", () => {
   addAircraftGroup(m, "plane", { side: "blue", country: "USA", name: "Air", type: "F-16C_50", count: 2, x: 0, y: 0 });
   assert.equal(addFlightRampSupport(m, "Cold", "blue", "USA").length, 8);
   assert.equal(addFlightRampSupport(m, "Air", "blue", "USA").length, 0);
+});
+
+test("populate defaults to the corpus-typical occupancy, caps at 38%, and support never lands on a slot or an object", () => {
+  for (const [th, af] of [["Caucasus", "Kutaisi"], ["PersianGulf", "Al Dhafra AFB"], ["Syria", "Incirlik"]]) {
+    const m = newMissionTable(th, 43200), ap = findAirport(th, af);
+    addAircraftGroup(m, "plane", { side: "blue", country: "USA", name: "Cold", type: "F-16C_50", count: 2, x: 0, y: 0, start: { kind: "parking_cold", airfield: af } });
+    addFlightRampSupport(m, "Cold", "blue", "USA");
+    const r = populateAirfield(m, { side: "blue", country: "USA", airfield: af, types: ["F-16C_50"], namePrefix: "P" });
+    const aircraftSlots = ap.slots.filter(s => (s[4] & 6) !== 0).length;
+    assert.ok(r.placed.length + 2 <= Math.round(0.17 * aircraftSlots) + 1, af);
+    const capped = populateAirfield(newMissionTable(th, 43200), { side: "blue", country: "USA", airfield: af, types: ["F-16C_50"], count: 200, namePrefix: "Q" });
+    assert.ok(capped.capped && capped.placed.length <= Math.floor(0.38 * aircraftSlots), af);
+    const objs: LuaTable[] = [];
+    for (const c of luaArray(asTable(asTable(asTable(m.coalition)!.blue)!.country))) for (const k of ["static", "plane"]) for (const g of luaArray(asTable(asTable(c[k])?.group))) objs.push(...luaArray(asTable(g.units)));
+    for (const sv of objs.filter(u => /svc/.test(String(u.name)))) {
+      const x = Number(sv.x), y = Number(sv.y);
+      assert.ok(!objs.some(o => o !== sv && Math.hypot(Number(o.x) - x, Number(o.y) - y) < 6), `${af}: ${sv.name} on another object`);
+      assert.ok(!ap.slots.some(sl => Math.hypot(sl[2] - x, sl[3] - y) < Math.max(sl[6] || 0, sl[5] || 0, 10) / 2 + 2), `${af}: ${sv.name} on a slot`);
+    }
+  }
 });

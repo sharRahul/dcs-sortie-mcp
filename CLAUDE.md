@@ -1181,5 +1181,8 @@ with tests. The rules they leave behind:
 - `scripts/dev/sweep-base-dressing.ts`: statics/vehicles within 3 km of bundled airfields across ~3000 ME-saved missions,
   with distance to the nearest slot. `AIRFIELD_SUPPORT_KITS` (dressing.ts) takes the most-used types within 120 m of slots;
   offsets behind the tail are OUR convention. `populateAirfield` adds the kit by default (`support`), `addFlightRampSupport`
-  dresses parking-start flights (scenario engine does it for every non-late-activated air force). Base SAM/AAA in the corpus
+  dresses parking-start flights (scenario engine does it for every non-late-activated air force). Kit objects never land on a parking slot footprint or within 6 m of another
+  object (`kitSpot` tries behind, further back, then sideways; else skipped and counted). Occupancy: corpus median 17% of
+  aircraft slots used (p25 10%, p75 29%, p90 38%, 4235 airfield instances); populate defaults to the median and caps at 38%
+  (`TYPICAL_OCCUPANCY`/`MAX_OCCUPANCY`) - never fill an airfield. Taxiways/buildings are not in the data. Base SAM/AAA in the corpus
   sits beyond 120 m - use site templates for that. To verify in DCS: kit objects not blocking taxi/spawn on the ramp.
