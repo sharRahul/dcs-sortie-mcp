@@ -13,6 +13,8 @@ export const audioConversionSchema = z.object({
   format: z.enum(['wav', 'ogg']),
   sampleRate: z.union([z.literal(16000), z.literal(22050), z.literal(24000), z.literal(44100), z.literal(48000)]).default(44100),
   channels: z.union([z.literal(1), z.literal(2)]).default(1),
+  /** Band-limit to 300-3400 Hz with light compression: an intercom/radio voice instead of a studio one. */
+  radioEffect: z.boolean().default(false),
 }).strict();
 export type AudioConversionInput = z.input<typeof audioConversionSchema>;
 const exec = promisify(execFile);
@@ -64,6 +66,7 @@ export async function convertAudio(input: AudioConversionInput) {
         '-nostdin', '-hide_banner', '-loglevel', 'error', '-n',
         '-protocol_whitelist', 'file,pipe', '-f', inputFormat, '-i', stagedInput,
         '-map', '0:a:0', '-vn', '-map_metadata', '-1',
+        ...(options.radioEffect ? ['-af', 'highpass=f=300,lowpass=f=3400,acompressor=threshold=-18dB:ratio=4,volume=2'] : []),
         '-ac', String(options.channels), '-ar', String(options.sampleRate),
         '-c:a', codec, ...(options.format === 'ogg' ? ['-q:a', '4'] : []),
         '-fs', String(MAX_BYTES), '-f', options.format, stagedOutput,

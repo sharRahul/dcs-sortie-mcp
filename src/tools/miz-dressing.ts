@@ -105,7 +105,7 @@ export function registerMizDressingTools(server: McpServer): void {
         "airfield reference point (the parking data has no slot orientation).\n\n" +
         "Args: sessionId, side, country, airfield (name or id), types (list, used in turn), count, namePrefix, " +
         "slots? ('any'|'shelters'|'open'), heading?, dead?\n\n" +
-        "Returns JSON: { airfield, placed: [{ name, type, slot }], freeSlotsLeft }.",
+        "Returns JSON: { airfield, placed: [{ name, type, slot }], support: [{ name, type, slot }], freeSlotsLeft }.",
       inputSchema: z
         .object({
           sessionId: sessionIdField,
@@ -117,11 +117,13 @@ export function registerMizDressingTools(server: McpServer): void {
           slots: z.enum(["any", "shelters", "open"]).default("any"),
           heading: z.number().min(0).max(360).optional(),
           dead: z.boolean().default(false),
+          support: z.boolean().default(true).describe('Ground support behind each parked aircraft: fire extinguisher, generator, ladder/ammo and a fuel truck or utility vehicle'),
         })
         .strict(),
       outputSchema: z.object({
         airfield: z.string(),
         placed: z.array(z.object({ name: z.string(), type: z.string(), slot: z.string() })),
+        support: z.array(z.object({ name: z.string(), type: z.string(), slot: z.string() })),
         freeSlotsLeft: z.number(),
       }),
       annotations,

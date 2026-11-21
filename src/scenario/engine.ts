@@ -5,6 +5,7 @@ import { actionSchema, conditionSchema, triggerSchema } from '../miz/trigger-sch
 import { addAircraftGroup, addGroundGroup, addTrigger, addTriggerZone, addWaypoint, findGroup, findUnit, setPayload, type AircraftStart, type ConditionSpec, type ActionSpec } from '../miz/authoring.js';
 import { configureFlight, createFlight, flyingReference, orbitSchema, ROLES, appendWaypointTask } from '../miz/flight.js';
 import { addFlightAtc, atcSchema } from '../miz/atc.js';
+import { addFlightRampSupport } from '../miz/dressing.js';
 import { findSiteTemplate } from '../miz/templates.js';
 import { createGroundPlan, validateGroundPlan, groundPlanSchema, groundMovementSchema } from '../miz/operations.js';
 import { addFarp } from '../miz/dressing.js';
@@ -149,7 +150,9 @@ export function validateScenario(input: unknown) {
   if (spec.victory.some(c => c.kind === 'time_after' && c.seconds >= spec.durationSeconds)) throw new Error('Victory time is not before the enforced mission time limit');
   return spec;
 }
-export function generateScenario(input: unknown) {
+/** `opts.deferAtc`: return the player's ATC request instead of writing it, so an async caller can voice it (writeFlightAtc). */
+export function generateScenario(input: unknown, opts: { deferAtc?: boolean } = {}) {
+  let atcRequest: { group: string; atc: z.input<typeof atcSchema> } | undefined;
   const spec = validateScenario(input), s = newSession(spec.theatre, spec.configuration?.startTime ?? 43200), random = generator(spec.seed);
   try {
     configureMission(s.mission, { ...spec.configuration, theatre: spec.theatre, title: spec.name, briefing: spec.objective,
@@ -196,6 +199,8 @@ export function generateScenario(input: unknown) {
     }
     // A flight cannot spawn at an airfield its side does not own (DCS 2.9.31, verified).
     warnings.push(...claimStartAirfields(s));
+    // Parked flights get the ground support editor-saved missions put beside parked aircraft.
+    for (const f of spec.forces) if ((f.category === 'plane' || f.category === 'helicopter') && f.side !== 'neutrals' && !f.lateActivation) addFlightRampSupport(s.mission, f.name, f.side, f.country);
     // The player's radio is scripted end to end in place of DCS ATC, unless the spec opts out.
     if (spec.player.atc !== false) {
       const pg = findGroup(s.mission, spec.player.group)!.group;
@@ -203,11 +208,12 @@ export function generateScenario(input: unknown) {
       const atAirfield = points.some(p => Number(p.airdromeId) > 0);
       if (spec.player.atc || atAirfield) {
         const awacs = spec.forces.find(f => f.side === findGroup(s.mission, spec.player.group)!.side && f.role === 'AWACS' && !f.lateActivation);
-        const atc = addFlightAtc(s.mission, spec.player.group, spec.player.atc || {
+        const request = spec.player.atc || {
           briefing: spec.objective,
           ...(awacs ? { awacs: { group: awacs.name, tasking: `Proceed as briefed: ${spec.objective}`.slice(0, 1000) } } : {}),
-        }, s.dictionary);
-        warnings.push(...atc.notes.map(n => `ATC: ${n}`));
+        };
+        if (opts.deferAtc) atcRequest = { group: spec.player.group, atc: request };
+        else warnings.push(...addFlightAtc(s.mission, spec.player.group, { ...request, voice: false }, s.dictionary).notes.map(n => `ATC: ${n}`));
       }
     }
     for (const zone of spec.zones) addTriggerZone(s.mission, zone);
@@ -249,7 +255,7 @@ export function generateScenario(input: unknown) {
       verification: 'Deterministic offline generation and validation only; no Mission Editor or DCS run' };
     embedAsset(s, 'media', 'scenario-specification.json', Buffer.from(JSON.stringify(spec, null, 2)));
     embedAsset(s, 'media', 'scenario-report.json', Buffer.from(JSON.stringify(report, null, 2)));
-    refresh(s); return { session: s, specification: spec, report };
+    refresh(s); return { session: s, specification: spec, report, atcRequest };
   } catch (error) { closeSession(s.id); throw error; }
 }
 export const campaignSchema = z.object({ name, stages: z.array(scenarioSchema).min(2).max(20), transitions: z.array(z.object({ from: name, to: name, on: z.enum(['victory', 'failure']) }).strict()).min(1).max(100) }).strict();

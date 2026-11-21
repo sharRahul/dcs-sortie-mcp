@@ -1163,3 +1163,23 @@ with tests. The rules they leave behind:
   registered (here: CH-47F, JF_17) — so they now get real `payload.fuel`. Never overwrite a bundled entry with it.
 - `compareWithCatalogue` reports drift (e.g. AJS37 chaff/flare 540/36 installed vs pydcs 1080/72). Report it;
   do not silently swap the bundled numbers.
+
+## Spoken ATC/briefing, speech providers, airfield support kits (2026-11-21) — offline-tested, not flown
+
+- `src/audio/speech.ts`: ElevenLabs REST (`ELEVENLABS_API_KEY`, voice id from the call or `ELEVENLABS_VOICE_ID`; only the text is
+  sent) or Windows System.Speech via PowerShell (text/path passed in env vars, never in the script). Output always goes through
+  FFmpeg (`convertAudio`, new `radioEffect` = 300-3400 Hz band + compression). Windows path verified locally (5.3 s OGG); the
+  ElevenLabs path has NOT been run here (no key). `dcs_audio_convert` takes `speech` instead of `inputPath`.
+- `src/audio/atc-voice.ts` `writeFlightAtc`: dry-runs `addFlightAtc` on a clone to get every line (`AtcResult.lines`), speaks each
+  (role voices: briefing/pilot/controller/awacs), embeds OGGs via `addResource`, then writes for real. A provider failure leaves
+  the script text-only with a note - never a failed tool call. Used by create/configure_flight and scenario_generate
+  (`generateScenario(spec, { deferAtc: true })` keeps the engine sync and deterministic; other callers get text-only ATC).
+- The briefing (`composeBriefing`) is built ONLY from the mission file: objective, flight, start time, weather (DCS wind dir is
+  blow-TOWARD, so +180 for "from"), departure, route legs computed from waypoints, AWACS, recovery. Missing fields are omitted.
+- Silent mode: `a_set_ATC_silent_mode({airdromeId=N}, true)` is the oracle-captured ME form - one action per aerodrome in a
+  mission-start trigger with no condition, exactly as the editor's SET ATC SILENT MODE does it.
+- `scripts/dev/sweep-base-dressing.ts`: statics/vehicles within 3 km of bundled airfields across ~3000 ME-saved missions,
+  with distance to the nearest slot. `AIRFIELD_SUPPORT_KITS` (dressing.ts) takes the most-used types within 120 m of slots;
+  offsets behind the tail are OUR convention. `populateAirfield` adds the kit by default (`support`), `addFlightRampSupport`
+  dresses parking-start flights (scenario engine does it for every non-late-activated air force). Base SAM/AAA in the corpus
+  sits beyond 120 m - use site templates for that. To verify in DCS: kit objects not blocking taxi/spawn on the ramp.

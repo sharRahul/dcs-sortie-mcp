@@ -4,7 +4,8 @@ import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { z } from 'zod';
 import { requireSession, refresh } from '../miz/sessions.js';
 import { appendWaypointTask, configureFlight, createFlight, flightConfigSchema, orbitSchema, ROLES, ROLE_TASK, taskSchema } from '../miz/flight.js';
-import { addFlightAtc, atcSchema } from '../miz/atc.js';
+import { atcSchema } from '../miz/atc.js';
+import { writeFlightAtc } from '../audio/atc-voice.js';
 import { addThreatRing, appendSurfaceTask, createGroundPlan, groundPlanSchema, ringSchema, surfaceTaskSchema } from '../miz/operations.js';
 import { configureIads, iadsSchema } from '../miz/iads.js';
 import { claimStartAirfields, editWarehouse, listWarehouses, readWarehouses, warehousePatchSchema } from '../miz/logistics.js';
@@ -46,7 +47,7 @@ export function registerAdvancedAuthoringTools(server: McpServer) {
     } catch (e) { return errorResult(e); }
   });
   server.registerTool('dcs_miz_create_flight', {
-    description: 'Create a validated configurable role flight with actual waypoint tasks. BARCAP/TARCAP are CAP conventions; DEAD uses SEAD, group strike uses CAS. AWACS/tanker require orbit geometry. Escort/interception/strike require an existing targetGroup. Ground starts append a station waypoint when orbit is given. Weapons are selected separately. Unknown reference aircraft use the generic tool. Atomic on error; offline only. atc: scripted ATC for this flight in place of DCS ATC (DCS ATC is set silent at the airfields it speaks for): briefing; F10-driven ground/tower startup, taxi and takeoff, each a pilot call plus controller reply (runway, ATC UHF/VHF from pydcs); automatic airborne handoff above departureAGLMetres; AWACS check-in whose reply gives awacs.tasking; and, when the flight has a Landing waypoint (dcs_miz_add_airfield_landing) or arrival.airfield, approach/tower/ground on the way home, prompted by inboundKm/finalKm rings. audio.<step> = embedded resource keys, else lines are text only. Fictional brevity-style dialogue; offline-compiled, not flown.',
+    description: 'Create a validated configurable role flight with actual waypoint tasks. BARCAP/TARCAP are CAP conventions; DEAD uses SEAD, group strike uses CAS. AWACS/tanker require orbit geometry. Escort/interception/strike require an existing targetGroup. Ground starts append a station waypoint when orbit is given. Weapons are selected separately. Unknown reference aircraft use the generic tool. Atomic on error; offline only. atc: scripted ATC for this flight in place of DCS ATC (DCS ATC is set silent at the airfields it speaks for): briefing; F10-driven ground/tower startup, taxi and takeoff, each a pilot call plus controller reply (runway, ATC UHF/VHF from pydcs); automatic airborne handoff above departureAGLMetres; AWACS check-in whose reply gives awacs.tasking; and, when the flight has a Landing waypoint (dcs_miz_add_airfield_landing) or arrival.airfield, approach/tower/ground on the way home, prompted by inboundKm/finalKm rings. Every line, and a detailed briefing (objective, flight, time, weather, departure, route legs, AWACS, recovery), is spoken by default: voice.provider auto = ElevenLabs when ELEVENLABS_API_KEY is set, else installed Windows voices, converted with FFmpeg and embedded; voice=false for text only; audio.<step> = your own resource keys. Fictional brevity-style dialogue; offline-compiled, not flown.',
     inputSchema: z.object({ ...baseGroup, type: z.string().min(1), category: z.enum(['plane', 'helicopter']).default('plane'),
       count: z.number().int().min(1).max(4).default(2), role: z.enum(ROLES), altitudeMetres: z.number().positive().max(20000).default(6096),
       skill: z.enum(['Average', 'Good', 'High', 'Excellent', 'Random', 'Client', 'Player']).default('High'),
@@ -58,17 +59,17 @@ export function registerAdvancedAuthoringTools(server: McpServer) {
       const s = requireSession(a.sessionId), pos = a.start && a.start.kind !== 'air' ? { x: 0, y: 0 } : resolvePosition(s, a);
       const { atc, ...args } = a;
       const data = createFlight(s.mission, { ...args, ...pos }); data.warnings.push(...claimStartAirfields(s));
-      const atcResult = atc ? addFlightAtc(s.mission, data.group, atc, s.dictionary) : undefined;
+      const atcResult = atc ? await writeFlightAtc(s, data.group, atc) : undefined;
       s.dirty = true; refresh(s); return result({ ...data, ...(atcResult ? { atc: atcResult } : {}) });
     } catch (e) { return errorResult(e); }
   });
   server.registerTool('dcs_miz_configure_flight', {
-    description: 'Set per-unit skills, tail numbers, livery, callsign, flight MHz/modulation and fixed-wing formation. Preserves other fields. Callsign family (number or name) is checked against the Hoggit wiki lists for the type and main task (dcs_list_callsigns); liveries against installed folders. Radio bands are not verified. Only one Player unit per mission. Atomic on error. atc: scripted ATC for this flight in place of DCS ATC (DCS ATC is set silent at the airfields it speaks for): briefing; F10-driven ground/tower startup, taxi and takeoff, each a pilot call plus controller reply (runway, ATC UHF/VHF from pydcs); automatic airborne handoff above departureAGLMetres; AWACS check-in whose reply gives awacs.tasking; and, when the flight has a Landing waypoint (dcs_miz_add_airfield_landing) or arrival.airfield, approach/tower/ground on the way home, prompted by inboundKm/finalKm rings. audio.<step> = embedded resource keys, else lines are text only. Fictional brevity-style dialogue; offline-compiled, not flown.',
+    description: 'Set per-unit skills, tail numbers, livery, callsign, flight MHz/modulation and fixed-wing formation. Preserves other fields. Callsign family (number or name) is checked against the Hoggit wiki lists for the type and main task (dcs_list_callsigns); liveries against installed folders. Radio bands are not verified. Only one Player unit per mission. Atomic on error. atc: scripted ATC for this flight in place of DCS ATC (DCS ATC is set silent at the airfields it speaks for): briefing; F10-driven ground/tower startup, taxi and takeoff, each a pilot call plus controller reply (runway, ATC UHF/VHF from pydcs); automatic airborne handoff above departureAGLMetres; AWACS check-in whose reply gives awacs.tasking; and, when the flight has a Landing waypoint (dcs_miz_add_airfield_landing) or arrival.airfield, approach/tower/ground on the way home, prompted by inboundKm/finalKm rings. Every line, and a detailed briefing (objective, flight, time, weather, departure, route legs, AWACS, recovery), is spoken by default: voice.provider auto = ElevenLabs when ELEVENLABS_API_KEY is set, else installed Windows voices, converted with FFmpeg and embedded; voice=false for text only; audio.<step> = your own resource keys. Fictional brevity-style dialogue; offline-compiled, not flown.',
     inputSchema: z.object({ sessionId, group: z.string().min(1), config: flightConfigSchema.default({}), atc: atcSchema.optional() }).strict(), annotations: mutation,
   }, async a => {
     try {
       const s = requireSession(a.sessionId); const warnings = configureFlight(s.mission, a.group, a.config);
-      const atc = a.atc ? addFlightAtc(s.mission, a.group, a.atc, s.dictionary) : undefined;
+      const atc = a.atc ? await writeFlightAtc(s, a.group, a.atc) : undefined;
       s.dirty = true; refresh(s); return result({ group: a.group, warnings, ...(atc ? { atc } : {}) });
     }
     catch (e) { return errorResult(e); }

@@ -5,6 +5,7 @@ import { asTable, luaArray, parseLuaAssignment, type LuaTable } from "../src/miz
 import { addAircraftGroup, addGroundGroup, findGroup, findUnit, newMissionTable } from "../src/miz/authoring.js";
 import {
   addFarp,
+  addFlightRampSupport,
   addTargetArea,
   findNavalTemplate,
   NAVAL_TEMPLATES,
@@ -129,4 +130,23 @@ for (const template of ['farp-staging', 'vehicle-staging', 'scud-base', 'sam-sup
     assert.ok(Math.hypot(Number(u.x) - 1000, Number(u.y) - 2000) <= r.radiusMetres);
   }
   assert.equal(validateMission(buildMissionDocument(roundTrip(m), {}, 'site')).errors.length, 0);
+});
+
+test("parked aircraft get the corpus-derived ground support kit behind the tail; wrecks and support=false do not", () => {
+  const m = newMissionTable("Caucasus", 43200);
+  const r = populateAirfield(m, { side: "blue", country: "USA", airfield: "Kutaisi", types: ["F-16C_50"], count: 2, namePrefix: "Ramp" });
+  assert.equal(r.placed.length, 2);
+  assert.deepEqual(r.support.map(s => s.type), ["FireExtinguisher02", "GeneratorF", "Ladder", "M978 HEMTT Tanker", "FireExtinguisher02", "GeneratorF", "Ladder", "Hummer"]);
+  const red = populateAirfield(m, { side: "red", country: "Russia", airfield: "Kutaisi", types: ["Su-25"], count: 1, namePrefix: "Rr" });
+  assert.ok(red.support.some(s => s.type === "ATZ-10"));
+  assert.equal(populateAirfield(m, { side: "blue", country: "USA", airfield: "Kutaisi", types: ["F-16C_50"], count: 1, namePrefix: "W", dead: true }).support.length, 0);
+  assert.equal(populateAirfield(m, { side: "blue", country: "USA", airfield: "Kutaisi", types: ["F-16C_50"], count: 1, namePrefix: "N", support: false }).support.length, 0);
+});
+
+test("a parking-start flight gets ramp support; an air start does not", () => {
+  const m = newMissionTable("Caucasus", 43200);
+  addAircraftGroup(m, "plane", { side: "blue", country: "USA", name: "Cold", type: "F-16C_50", count: 2, x: 0, y: 0, start: { kind: "parking_cold", airfield: "Kutaisi" } });
+  addAircraftGroup(m, "plane", { side: "blue", country: "USA", name: "Air", type: "F-16C_50", count: 2, x: 0, y: 0 });
+  assert.equal(addFlightRampSupport(m, "Cold", "blue", "USA").length, 8);
+  assert.equal(addFlightRampSupport(m, "Air", "blue", "USA").length, 0);
 });

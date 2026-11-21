@@ -1,5 +1,6 @@
 import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { z } from 'zod';
+import { writeFlightAtc } from '../audio/atc-voice.js';
 import { readFile, stat } from 'node:fs/promises';
 import { basename } from 'node:path';
 import { missionReport } from '../miz/report.js';
@@ -100,7 +101,9 @@ export function registerMissionDesignTools(server: McpServer) {
   server.registerTool('dcs_scenario_generate', {
     description: 'Deterministically generate an editable mission session from a strict client-supplied specification and optional seed. Supports air-to-air, counter-air, SEAD/DEAD, CAS/strike, zone/flag CSAR, convoy escort, naval strike and ship-linked starts. Explicit forces/supports, difficulty AI skills, actual duration limit, victory/failure goals and event-driven director. Embeds specification/report. No subscription; offline only.',
     inputSchema: z.object({ specification: scenarioSchema }).strict(), annotations: writes,
-  }, async a => { try { const built = generateScenario(a.specification); return result({ sessionId: built.session.id, report: built.report }); } catch (e) { return errorResult(e); } });
+  }, async a => { try { const built = generateScenario(a.specification, { deferAtc: true }); let atc;
+    if (built.atcRequest) { atc = await writeFlightAtc(built.session, built.atcRequest.group, built.atcRequest.atc); built.session.dirty = true; refresh(built.session); }
+    return result({ sessionId: built.session.id, report: built.report, ...(atc ? { atc: { briefing: atc.briefing, notes: atc.notes, triggers: atc.triggers } } : {}) }); } catch (e) { return errorResult(e); } });
   server.registerTool('dcs_campaign_generate', {
     description: 'Generate validated mission-stage sessions plus a deterministic, acyclic victory/failure transition manifest. Save each session with save_as. Does not claim to write a DCS .cmp or automatic cross-mission persistence. All stages roll back if any fails.',
     inputSchema: z.object({ campaign: campaignSchema }).strict(), annotations: writes,

@@ -93,3 +93,24 @@ test("flyable = make_flyable / MAC_flyable in a deployed mod, including a local 
   assert.equal(playerFlyable("F-15E", [mod]), "no");
   assert.equal(playerFlyable("Su-27", [{ ...mod, deployed: false }]), "unknown");
 });
+
+test("briefing is composed from the mission: objective, flight, weather, departure, route, recovery", () => {
+  const m = playerMission("Senaki-Kolkhi");
+  m.weather = { wind: { atGround: { speed: 5, dir: 90 } }, season: { temperature: 18 }, qnh: 760 };
+  const r = addFlightAtc(m, "Viper", { callsign: "Viper 1-1", briefing: "Strike the bridge.", voice: false });
+  for (const t of [/^MISSION BRIEFING/, /Objective: Strike the bridge\./, /Flight: Viper 1-1, 2 F-16C_50/, /surface wind from 270 degrees at 10 knots/,
+    /temperature 18/, /altimeter 29\.92/, /Departure: Kutaisi, runway/, /Route: landing, \d+ degrees/, /Recovery: Senaki-Kolkhi/]) assert.match(r.briefing, t);
+  assert.equal(r.lines.briefing, r.briefing);
+});
+
+test("voiced ATC falls back to text when no speech provider works, and still writes the script", async () => {
+  const { writeFlightAtc } = await import("../src/audio/atc-voice.js");
+  const saved = process.env.ELEVENLABS_API_KEY; delete process.env.ELEVENLABS_API_KEY;
+  try {
+    const s = { mission: playerMission("Kutaisi"), dictionary: {} as LuaTable, mapResource: {} as LuaTable, files: new Map<string, Buffer>() };
+    const r = await writeFlightAtc(s, "Viper", { briefing: "x", voice: { provider: "elevenlabs" } });
+    assert.match(r.notes[0], /Voice generation stopped \(ELEVENLABS_API_KEY is not set\)/);
+    assert.equal(s.files.size, 0);
+    assert.ok(r.triggers.length > 0);
+  } finally { if (saved !== undefined) process.env.ELEVENLABS_API_KEY = saved; }
+});

@@ -6,9 +6,9 @@
  * ground truth. Layouts that this file arranges itself (target-area grids, FARP
  * support placement, ship stations) are conventions, and each says so.
  */
-import { luaArray, type LuaTable } from "./lua.js";
+import { asTable, luaArray, type LuaTable } from "./lua.js";
 import { findModUnit } from "../dcs/mods.js";
-import { addAircraftGroup, addGroundGroup, chooseParking, countryId, ensureCountry, maxIds, occupiedParking, type Side } from "./authoring.js";
+import { addAircraftGroup, addGroundGroup, chooseParking, countryId, ensureCountry, findGroup, maxIds, occupiedParking, type Side } from "./authoring.js";
 import { addStatic } from "./editing.js";
 import { addRectanglePerimeter, perimeterSpecSchema, type PerimeterSpec, type PerimeterResult } from './perimeter.js';
 import type { SceneTemplate } from "./scene-import.js";
@@ -223,11 +223,32 @@ export interface PopulateAirfieldArgs {
   heading?: number;
   /** Park them as wrecks (e.g. after a strike). */
   dead?: boolean;
+  /**
+   * Ground support behind each parked aircraft (see AIRFIELD_SUPPORT_KITS). Default true
+   * for aircraft types; never for wrecks.
+   */
+  support?: boolean;
 }
+
+/**
+ * What editor-saved missions put next to parked aircraft. From
+ * `scripts/dev/sweep-base-dressing.ts` over ~3000 ME-saved missions (user folders plus
+ * ED's campaigns and module missions): these are the most-used static and vehicle types
+ * within 120 m of a parking slot at dressed airfields (e.g. FireExtinguisher02 in 204
+ * missions / 70 airfields, GeneratorF 455 / 75, M978 HEMTT Tanker 828 / 67, ATZ-10
+ * 460 / 93, Ural-4320 APA-5D 294 / 113). The TYPES are corpus-derived; the exact
+ * offsets behind the tail are our convention, not editor-derived.
+ */
+export const AIRFIELD_SUPPORT_KITS: Record<"blue" | "red", { statics: string[]; vehicles: string[] }> = {
+  blue: { statics: ["FireExtinguisher02", "GeneratorF", "Ladder"], vehicles: ["M978 HEMTT Tanker", "Hummer"] },
+  red: { statics: ["FireExtinguisher02", "GeneratorF", "ammo_cargo"], vehicles: ["ATZ-10", "Ural-4320 APA-5D"] },
+};
 
 export interface PopulateAirfieldResult {
   airfield: string;
   placed: { name: string; type: string; slot: string }[];
+  /** Support objects placed behind parked aircraft. */
+  support: { name: string; type: string; slot: string }[];
   /** Free slots left after placement (any type). */
   freeSlotsLeft: number;
 }
@@ -244,6 +265,7 @@ export function populateAirfield(mission: LuaTable, args: PopulateAirfieldArgs):
   if (!args.types.length) throw new Error("Give at least one type to park.");
   const taken = occupiedParking(mission, airport);
   const placed: PopulateAirfieldResult["placed"] = [];
+  const support: PopulateAirfieldResult["support"] = [];
 
   const slotFilter = (s: ParkingSlotTuple) =>
     args.slots === "shelters" ? (s[4] & 8) !== 0 : args.slots === "open" ? (s[4] & 8) === 0 : true;
@@ -282,9 +304,26 @@ export function populateAirfield(mission: LuaTable, args: PopulateAirfieldArgs):
       dead: args.dead,
     });
     placed.push({ name, type, slot: slot[1] });
+    const isAircraft = kind.category === "plane" || kind.category === "helicopter";
+    if (isAircraft && !args.dead && args.support !== false) {
+      // Behind the tail (the object faces the reference point), spread across the slot.
+      const kit = AIRFIELD_SUPPORT_KITS[args.side === "red" ? "red" : "blue"];
+      const h = heading * DEG, fwd = [Math.cos(h), Math.sin(h)], right = [-Math.sin(h), Math.cos(h)];
+      const back = Math.min(30, Math.max(Number(slot[5]) || 0, 12) / 2 + 5);
+      const items = [...kit.statics.map((t, k) => ({ t, f: -back, r: (k - 1) * 6 })),
+        { t: kit.vehicles[i % kit.vehicles.length], f: -back - 10, r: 0 }];
+      items.forEach(({ t, f, r }, k) => {
+        const sname = `${name}-svc-${k + 1}`;
+        addStatic(mission, {
+          side: args.side, country: args.country, countryId: args.countryId, name: sname, type: t,
+          x: slot![2] + fwd[0] * f + right[0] * r, y: slot![3] + fwd[1] * f + right[1] * r, heading,
+        });
+        support.push({ name: sname, type: t, slot: slot![1] });
+      });
+    }
   }
   const freeSlotsLeft = airport.slots.filter((s) => !taken.has(s[1]) && slotFilter(s)).length;
-  return { airfield: airport.name, placed, freeSlotsLeft };
+  return { airfield: airport.name, placed, support, freeSlotsLeft };
 }
 
 // ---------------------------------------------------------------------------
@@ -776,4 +815,28 @@ export function autoAirWing(
     ? `pydcs country list + Wikipedia "${real!.pages.aircraft}"`
     : `pydcs country list only (no Wikipedia aircraft list for ${country})`;
   return { squadrons, dropped, basis };
+}
+
+/**
+ * Ground support (AIRFIELD_SUPPORT_KITS) behind every unit of a flight that starts on a
+ * parking slot, so the player's own ramp is not bare. Skips groups not on parking (air
+ * starts, runway, ships, FARPs). Offsets are our convention, behind the unit's heading.
+ */
+export function addFlightRampSupport(mission: LuaTable, groupName: string, side: Side, country: string): string[] {
+  const found = findGroup(mission, groupName);
+  if (!found) throw new Error(`No group named '${groupName}'`);
+  const p1 = asTable(asTable(asTable(found.group.route)?.points)?.[1]);
+  if (!(Number(p1?.airdromeId) > 0) || !/Parking/.test(String(p1?.type ?? ''))) return [];
+  const kit = AIRFIELD_SUPPORT_KITS[side === "red" ? "red" : "blue"];
+  const names: string[] = [];
+  luaArray(asTable(found.group.units)).forEach((u, i) => {
+    const h = Number(u.heading) || 0, fwd = [Math.cos(h), Math.sin(h)], right = [-Math.sin(h), Math.cos(h)];
+    const items = [...kit.statics.map((t, k) => ({ t, f: -13, r: (k - 1) * 6 })), { t: kit.vehicles[i % kit.vehicles.length], f: -23, r: 0 }];
+    items.forEach(({ t, f, r }, k) => {
+      const name = `${groupName}-${i + 1}-svc-${k + 1}`;
+      addStatic(mission, { side, country, name, type: t, x: Number(u.x) + fwd[0] * f + right[0] * r, y: Number(u.y) + fwd[1] * f + right[1] * r, heading: h / DEG });
+      names.push(name);
+    });
+  });
+  return names;
 }
