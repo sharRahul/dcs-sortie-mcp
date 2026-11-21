@@ -22,7 +22,8 @@ export function registerResources(server: McpServer): void {
   for (const [name, uri, relative] of [
     ['mission-production-skill','dcs://skills/mission-production','SKILL.md'],
     ['mission-production-contracts','dcs://skills/mission-production/contracts','references/workflow.md'],
-  ] as const) server.registerResource(name,uri,{title:name==='mission-production-skill'?'DCS mission production skill':'Mission production tool contracts',description:'Built-in workflow for planning, generation, validation, revision and flight evidence.',mimeType:'text/markdown'},async address=>({contents:[{uri:address.href,mimeType:'text/markdown',text:await readFile(packagePath('skills','dcs-mission-production',relative),'utf8')}]}));
+    ['mission-content-checklist','dcs://skills/mission-production/checklist','references/mission-content.md'],
+  ] as const) server.registerResource(name,uri,{title:name==='mission-production-skill'?'DCS mission production skill':name==='mission-content-checklist'?'What goes into a mission':'Mission production tool contracts',description:name==='mission-content-checklist'?'Build order and checklist for a complete mission: shell, player flight, support, threats, scenery, briefing/ATC, logic, validation - with the tool for each item.':'Built-in workflow for planning, generation, validation, revision and flight evidence.',mimeType:'text/markdown'},async address=>({contents:[{uri:address.href,mimeType:'text/markdown',text:await readFile(packagePath('skills','dcs-mission-production',relative),'utf8')}]}));
 
   server.registerResource(
     "conventions",

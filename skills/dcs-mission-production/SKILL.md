@@ -9,7 +9,7 @@ Carry the user's mission intent through a durable project, immutable revisions a
 
 ## Start or resume
 
-Read dcs://guide/conventions. If a project already exists, call dcs_production_status and continue its next actions. Otherwise record the objective, theatre, player/start, forces, outcomes, dependencies and assumptions. Resolve only missing decisions that materially affect the mission; use stated constraints and reasonable defaults for routine choices.
+Read dcs://guide/conventions and, for what a complete mission contains and which tool builds each part, [the mission checklist](references/mission-content.md) (dcs://skills/mission-production/checklist). If a project already exists, call dcs_production_status and continue its next actions. Otherwise record the objective, theatre, player/start, forces, outcomes, dependencies and assumptions. Resolve only missing decisions that materially affect the mission; use stated constraints and reasonable defaults for routine choices.
 
 Check exact types, installed dependencies, terrain/footprints, aircraft coverage and historical scope before promising fidelity. dcs_authoring_coverage_audit distinguishes available records from missing evidence. Generic layouts, unsupported pairings and missing service dates stay explicit.
 
