@@ -1374,3 +1374,50 @@ driven by the agent through `scripts/dev/dcs-input.ps1` (scancodes `\` 0x2B, F10
 - **FARP cold start VERIFIED.** UH-1H `farp_cold` spawned on the pad (pad and all 3 support vehicles on LAND),
   ENGINE_STARTUP t=76, inAir t=202, TAKEOFF t=220, 715 m along its route at 254 m AGL by t=242. No HIT/CRASH.
   Rearming from the support group was not exercised.
+
+## Client installation smoke test (2026-11-21) - `scripts/dev/client-install-smoke.mjs`
+
+Each client's STORED launch entry was read from its own config and started exactly as stored:
+Claude Desktop `claude_desktop_config.json` `mcpServers.dcs`, the installed Claude Desktop `.mcpb`
+extension (`manifest.json` `server.mcp_config`, `${__dirname}` expanded, unanswered `user_config`
+fields as empty strings), every enabled `dcs*` entry in `~/.codex/config.toml`, and the ChatGPT local
+plugin in the Codex plugin cache (`mcp.json`, `${PLUGIN_ROOT}` expanded). Over MCP stdio, each session
+listed tools, made 50 authoring calls (weather, a 2-ship player flight with a cold parking start,
+a FARP with support, 10 ground groups with 2 waypoints each, 4 zones, 5 triggers), validated, saved,
+closed, reopened the saved file and listed its groups.
+
+| Entry | Server name | Tools | Calls / failures | Validate errors | Reopened intact |
+|---|---|---:|---|---:|---|
+| Claude Desktop config (repo `dist`) | dcs-sortie-mcp 0.1.0 | 198 | 50 / 0 | 0 | yes (10/10 groups + player) |
+| Claude Desktop `.mcpb` (installed) | dcs-mcp-server 0.1.0 | 198 | 50 / 0 | 0 | yes |
+| Codex `dcs` (repo `dist`) | dcs-sortie-mcp 0.1.0 | 198 | 50 / 0 | 0 | yes |
+| Codex `dcs-mcp-server` (`npx -y dcs-mcp-server`) | - | - | did not start (request timed out) | - | - |
+| ChatGPT local plugin 0.1.0 (installed) | dcs-mcp-server 0.1.0 | 198 | 50 / 0 | 0 | yes |
+
+Findings:
+- The installed `.mcpb` and ChatGPT plugin report server name `dcs-mcp-server`, while the repo
+  build reports `dcs-sortie-mcp`. Both show version 0.1.0, so they are an older build than `dist`
+  and were never rebuilt and reinstalled. Reinstall both before a release check.
+- `~/.codex/config.toml` still carries an enabled `dcs-mcp-server` entry launched through `npx`.
+  It cannot start (no such registry package; distribution is GitHub-only), and Codex will report a
+  failed MCP server on every start. It should be removed from that config.
+
+What this does NOT establish: that each app's own UI lists the tools, that its model selects them
+from a plain request, the app's own timeouts/approval prompts, or behaviour over a session of
+hundreds of calls. Those need a person typing into each app. Of those, only Codex is recorded
+(mission built and flown, 2026-11-20).
+
+## FARP refuel check (2026-11-21) - `scripts/dev/build-rearm-check.mjs` - INCONCLUSIVE
+
+AI UH-1H, `farp_cold` at FARP-Rearm with 25 % fuel, one leg out and a `Land`/`Landing` waypoint back
+on the pad with `linkUnit`/`helipadId` set to the pad (as the start point carries them). Agent clicked FLY;
+no human input. ENGINE_STARTUP t=76, TAKEOFF t=221, fuel falling 0.250 -> 0.172 by t=827. From t~512 it
+hovered at 30-36 m AGL and never landed: at t~830 it sat ~4.3 km NORTH of the pad (x=-283963, y=685175 vs
+support trucks at x=-288017), close to Kutaisi, so it was not holding over the FARP at all.
+
+So refuelling was never exercised. The likely cause is the return waypoint, not a DCS refuel limit: a
+`Land` point linked to a FARP pad by copying the start point's `linkUnit` has no ME-saved precedent checked
+here. Next attempt should copy an editor-saved helicopter "Landing" at a FARP field-for-field.
+`gun` in the payload does nothing on a UH-1H (no internal gun; `getAmmo` = 0), so only fuel is measurable on
+this airframe. ATC silent mode for AI traffic was set up in the same mission (Senaki silenced, AI F-16s
+departed t=343/370) but is unverified: it can only be judged by ear.

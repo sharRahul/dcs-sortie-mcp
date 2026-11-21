@@ -1,6 +1,9 @@
 # Pending or unsupported behavior
 
-- No scenario is live-passed until the Windows operator runs and documents it.
+- Current live status, including what later runs superseded, is in
+  [acceptance-matrix.md](acceptance-matrix.md). No generated-package row has all eight
+  checks recorded yet; the nine example scenarios passed native functional execution on
+  19 November.
 - Terrain coordinates are explicit design placements, not terrain-cleared. Use live
   surface queries and inspect every vehicle, static, FARP and ship before evaluating AI.
 - Aircraft/country/weapon catalogues are snapshots. Pylon checks do not prove all
