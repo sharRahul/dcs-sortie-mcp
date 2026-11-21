@@ -76,3 +76,24 @@ export async function synthesizeSpeech(input: SpeechInput, outputPath: string, o
     return { ...converted, provider };
   } finally { await rm(staging, { recursive: true, force: true }); }
 }
+
+/**
+ * Can a spoken line be produced here at all? Needs a provider (ElevenLabs key, or Windows
+ * with at least one installed voice) AND FFmpeg. Returns the reason when not.
+ */
+export async function speechAvailable(requested: 'auto' | 'elevenlabs' | 'windows' = 'auto'): Promise<{ ok: true; provider: 'elevenlabs' | 'windows' } | { ok: false; reason: string }> {
+  let provider: 'elevenlabs' | 'windows';
+  try { provider = speechProvider(requested); } catch (e) { return { ok: false, reason: (e as Error).message }; }
+  if (provider === 'elevenlabs' && !process.env.ELEVENLABS_API_KEY?.trim()) return { ok: false, reason: 'ELEVENLABS_API_KEY is not set' };
+  try {
+    await exec(process.env.DCS_FFMPEG_PATH || 'ffmpeg', ['-version'], { timeout: 15_000, windowsHide: true });
+  } catch { return { ok: false, reason: 'FFmpeg was not found (install it on PATH or set DCS_FFMPEG_PATH)' }; }
+  if (provider === 'windows') {
+    try {
+      const { stdout } = await exec('powershell.exe', ['-NoProfile', '-NonInteractive', '-Command',
+        'Add-Type -AssemblyName System.Speech; (New-Object System.Speech.Synthesis.SpeechSynthesizer).GetInstalledVoices().Count'], { timeout: 30_000, windowsHide: true });
+      if (!(Number(stdout.trim()) > 0)) return { ok: false, reason: 'Windows has no installed speech voices' };
+    } catch { return { ok: false, reason: 'Windows speech (System.Speech) is not available' }; }
+  }
+  return { ok: true, provider };
+}

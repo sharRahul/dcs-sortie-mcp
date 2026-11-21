@@ -103,14 +103,25 @@ test("briefing is composed from the mission: objective, flight, weather, departu
   assert.equal(r.lines.briefing, r.briefing);
 });
 
-test("voiced ATC falls back to text when no speech provider works, and still writes the script", async () => {
+test("without a voice (no key, no FFmpeg) ATC falls back to DCS's own: briefing only, nothing silenced", async () => {
   const { writeFlightAtc } = await import("../src/audio/atc-voice.js");
   const saved = process.env.ELEVENLABS_API_KEY; delete process.env.ELEVENLABS_API_KEY;
   try {
     const s = { mission: playerMission("Kutaisi"), dictionary: {} as LuaTable, mapResource: {} as LuaTable, files: new Map<string, Buffer>() };
     const r = await writeFlightAtc(s, "Viper", { briefing: "x", voice: { provider: "elevenlabs" } });
-    assert.match(r.notes[0], /Voice generation stopped \(ELEVENLABS_API_KEY is not set\)/);
+    assert.match(r.notes[0], /ELEVENLABS_API_KEY is not set\): kept DCS's own ATC/);
     assert.equal(s.files.size, 0);
-    assert.ok(r.triggers.length > 0);
+    assert.deepEqual(r.silenced, []);
+    assert.equal(r.triggers.length, 1);
+    assert.doesNotMatch(compiled(s.mission, "actions"), /a_set_ATC_silent_mode|a_add_radio_item/);
+    assert.match(r.briefing, /Objective: x/);
   } finally { if (saved !== undefined) process.env.ELEVENLABS_API_KEY = saved; }
+});
+
+test("voice=false keeps the explicit text-only scripted ATC", async () => {
+  const { writeFlightAtc } = await import("../src/audio/atc-voice.js");
+  const s = { mission: playerMission("Kutaisi"), dictionary: {} as LuaTable, mapResource: {} as LuaTable, files: new Map<string, Buffer>() };
+  const r = await writeFlightAtc(s, "Viper", { briefing: "x", voice: false });
+  assert.deepEqual(r.silenced, ["Kutaisi"]);
+  assert.ok(r.triggers.length > 5);
 });

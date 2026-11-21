@@ -1190,3 +1190,14 @@ with tests. The rules they leave behind:
   aircraft slots used (p25 10%, p75 29%, p90 38%, 4235 airfield instances); populate defaults to the median and caps at 38%
   (`TYPICAL_OCCUPANCY`/`MAX_OCCUPANCY`) - never fill an airfield. Taxiways/buildings are not in the data. Base SAM/AAA in the corpus
   sits beyond 120 m - use site templates for that. To verify in DCS: kit objects not blocking taxi/spawn on the ramp.
+
+## ATC fallback and short server instructions (2026-11-21)
+
+- Scripted ATC needs a voice. `writeFlightAtc` probes first (`speechAvailable`: ElevenLabs key or Windows voices, plus
+  FFmpeg). No voice, or a failure part-way (its embedded files are removed again) -> `exchanges: false`: only the briefing
+  (text), no exchanges, nothing silenced, DCS's own ATC and AI AWACS stay. `voice: false` is the caller's explicit
+  text-only scripted ATC and is honoured. The sync scenario path (production/acceptance/campaign) writes `exchanges: false`.
+- `SERVER_INSTRUCTIONS` (src/guide.ts) is a ~1.9k-character routing table + must-not-miss rules; Claude Code truncated the
+  old 11.5k version at ~4k, so every rule after the map-axes line never reached the model. The full text is `FULL_RULES`,
+  served first in `dcs://guide/conventions`. `tests/guide.test.ts` holds the instructions <= 2500 chars: put new detail in
+  FULL_RULES, and only a rule a model must never miss in the instructions.

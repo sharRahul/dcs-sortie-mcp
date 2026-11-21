@@ -7,9 +7,8 @@
  * the `dcs://guide/conventions` resource (complete).
  */
 
-export const SERVER_INSTRUCTIONS = `DCS World mission authoring (offline .miz) and live control of a running sim.
-
-Mission production: for a complete playable mission or a revision with flight evidence, read dcs://skills/mission-production (built-in skill) and dcs://skills/mission-production/contracts. The produce_mission prompt and dcs_production_create/generate/revise/validate/capture/status tools preserve immutable revisions and correlate evidence to exact saved bytes. New revisions never inherit old flight passes. The dcs_authoring_coverage_audit tool reports remaining evidence gaps; caller-supplied numeric coverage profiles are read-only evidence, not authoring defaults.
+/** The complete rules, served at the top of dcs://guide/conventions. */
+const FULL_RULES = `Mission production: for a complete playable mission or a revision with flight evidence, read dcs://skills/mission-production (built-in skill) and dcs://skills/mission-production/contracts. The produce_mission prompt and dcs_production_create/generate/revise/validate/capture/status tools preserve immutable revisions and correlate evidence to exact saved bytes. New revisions never inherit old flight passes. The dcs_authoring_coverage_audit tool reports remaining evidence gaps; caller-supplied numeric coverage profiles are read-only evidence, not authoring defaults.
 
 Workflow: dcs_bridge_status first to decide live vs offline. Offline: dcs_miz_new or dcs_miz_open -> dcs_miz_* edits -> dcs_miz_validate -> dcs_miz_save_as (always a NEW file). Live: check bridge phase is "running" before any mission-environment tool or dcs_load_mission; afterwards read dcs_get_log_errors, the only channel that reports a mission that failed to load.
 
@@ -37,17 +36,19 @@ Conventions that are easy to get wrong:
 - A flight only spawns at an airfield its side owns, or at a ship/FARP that has a warehouse entry. Adding an airfield/ship/FARP start claims a neutral airfield for the flight's side and creates a missing ship/FARP entry; an enemy-owned airfield is reported, never flipped (dcs_miz_set_airbase_coalition).
 - Removing something a trigger references is refused unless force=true (the trigger would never fire).
 - Validation severity is calibrated against 3023 Mission-Editor-saved missions, every mission DCS itself ships among them, which report zero ERRORs: an ERROR means DCS or the editor cannot handle the file. Things the editor itself saves — duplicate unit names and unit ids, dangling trigger/task/goal/waypoint ids, two aircraft on one parking spot, countermeasure counts above the pydcs catalogue — are WARNINGS. Read them; do not treat them as a broken mission.
-- Player flights: default to TWO aircraft (the player as lead plus one AI wingman) unless the user asks for a different size; only the lead carries skill Player. ATC: missions do not rely on DCS's own ATC. For every player/client flight that starts or lands at an airfield, pass atc to dcs_miz_create_flight or dcs_miz_configure_flight (dcs_scenario_generate does it by default for the player): it silences DCS ATC at those airfields and scripts the whole sortie - briefing, F10-driven startup/taxi/takeoff calls with controller replies, airborne handoff, AWACS check-in with the next action, and approach/landing/taxi-in when the flight has a Landing waypoint (add it with dcs_miz_add_airfield_landing first). Every line and a detailed briefing (objective from atc.briefing or the mission description, then flight, time, weather, departure, route legs, AWACS, recovery - all from the mission file) are SPOKEN by default: atc.voice.provider auto uses ElevenLabs when ELEVENLABS_API_KEY is set (voices = ElevenLabs voice ids; ELEVENLABS_VOICE_ID as default), else the installed Windows voices; FFmpeg converts to OGG with a radio filter and the files are embedded. voice=false for text only; audio.<step> keys override single lines. dcs_audio_convert also takes speech instead of inputPath for one-off lines.
+- Player flights: default to TWO aircraft (the player as lead plus one AI wingman) unless the user asks for a different size; only the lead carries skill Player. ATC: when a voice can be produced, missions do not rely on DCS's own ATC. For every player/client flight that starts or lands at an airfield, pass atc to dcs_miz_create_flight or dcs_miz_configure_flight (dcs_scenario_generate does it by default for the player): it silences DCS ATC at those airfields and scripts the whole sortie - briefing, F10-driven startup/taxi/takeoff calls with controller replies, airborne handoff, AWACS check-in with the next action, and approach/landing/taxi-in when the flight has a Landing waypoint (add it with dcs_miz_add_airfield_landing first). Every line and a detailed briefing (objective from atc.briefing or the mission description, then flight, time, weather, departure, route legs, AWACS, recovery - all from the mission file) are SPOKEN by default: atc.voice.provider auto uses ElevenLabs when ELEVENLABS_API_KEY is set (voices = ElevenLabs voice ids; ELEVENLABS_VOICE_ID as default), else the installed Windows voices; FFmpeg converts to OGG with a radio filter and the files are embedded. When no voice can be produced (no ElevenLabs key and no Windows voices, or no FFmpeg) the flight KEEPS DCS's own ATC and only the briefing is written, as text; nothing is silenced. voice=false is an explicit choice of text-only scripted ATC; audio.<step> keys override single lines. dcs_audio_convert also takes speech instead of inputPath for one-off lines.
 - Airfield and ramp dressing: dcs_miz_populate_airfield puts ground support behind every parked aircraft by default (types editor-saved missions use most next to parked aircraft). Static aircraft only: a flight's parked aircraft are turned by DCS to the slot's own direction at spawn (heading 0 in the file became 164 degrees at Kutaisi), so nothing can be placed 'behind' a flight offline - kit placed that way blocked AI taxi in a live test. Add base air defence with the site templates, not with populate.
 - Player-flyable types: only aircraft a deployed Mods/aircraft module registers with a cockpit can take a Player/Client slot. CoreMods also defines AI-only aircraft (e.g. F-15E without the module); dcs_list_unit_types marks them playerFlyable=false and the validator warns PLAYER_TYPE_NOT_FLYABLE.
 - Reactive missions: late-activated reserves plus a trigger that activates them (dcs_miz_add_reactive_spawn) is how this is done and is oracle-backed. Conditions can be ORed with a { kind: 'or' } separator. ED's Dynamic Slots flag (dcs_miz_set_dynamic_spawn) is written as the boolean it is and nothing more is claimed for it.
 - Campaigns: dcs_campaign_read/write/step handle a real DCS .cmp. Stages are a score ladder (above 50 advances, 50 repeats, below 50 retreats) and DCS picks at random among the next stage's missions whose interval contains the score, so every stage must cover 0-100. Put the .cmp beside its missions; they are never copied.
 - Imported compounds: dcs_scan_scene_candidates / dcs_import_scene_template / dcs_miz_add_scene reuse a real static footprint from a mission the user supplies, with each object's own offset and heading. Provenance 'imported': measured, not flown.\n- Unit types come from three sources, in this order: the pinned pydcs catalogue, mods on this machine (dcs_list_installed_mods), and types LEARNED from the user's own missions (dcs_learn_mission_types, dcs_list_learned_types). The catalogue always wins. A learned type proves only that the id exists and which category DCS files it under: it has no maximum fuel, no parking footprint and no task list, so no payload fuel is written for it and parking fit is not checked. Its stores are the CLSIDs it was actually flown with, which is the only weapon list a mod's mission can give. Use it for DCS types newer than the pin (Oil rig, the carrier deck crew, FARP_SINGLE_01), mods whose ids live in compiled Lua, and mods a mission names that are not installed here.\n- dcs_miz_add_farp takes a type argument for a heliport static the catalogue does not list (FARP_SINGLE_01, a mod pad), once a learned or mod source knows it.\n- Mods come in two kinds and the difference decides whether a mission loads. DEPLOYED mods sit in a Mods/ folder DCS loads, so their types spawn. AVAILABLE mods were found in a mod-manager repository (OvGME and the like, beside the DCS profile): the ids are real but DCS will not spawn them until the user enables the mod. dcs_list_installed_mods reports both with a deployed flag, and a deployed mod always wins the same id.\n- So an unknown type has four different answers, and the validator distinguishes them: nothing (catalogued, or a mod DCS loads), MOD_NOT_DEPLOYED (a mod in a repository), TYPE_NOT_ON_THIS_MACHINE (learned from a mission, nothing here declares it), and UNKNOWN_UNIT_TYPE (nothing knows it - likely a typo). All warnings: the file is valid in every case, but only the first will actually spawn here.\n- Any theatre can hold a mission and units; what needs bundled data is airfield lookup and lat/lon conversion. For an installed theatre pydcs never exported, sample its airbases once from a running mission with dcs_airbase_build_pack.\n- A troop lift's unload task is Disembarking. DCS refuses Hoggit's DisembarkFromTransport outright, which was found by loading a mission and reading dcs.log, so do not go back to it.
-- Sessions are snapshotted to disk; after a server restart use dcs_miz_list_sessions and dcs_miz_restore_session.
-
-Full reference: resource dcs://guide/conventions.`;
+- Sessions are snapshotted to disk; after a server restart use dcs_miz_list_sessions and dcs_miz_restore_session.`;
 
 export const CONVENTIONS_GUIDE = `# DCS Sortie MCP conventions
+
+## Rules
+
+${FULL_RULES}
 
 ## Coordinates
 - DCS map coordinates are metres on a per-theatre transverse-Mercator grid. **x is NORTH, y is EAST.**
@@ -239,3 +240,30 @@ export const CONVENTIONS_GUIDE = `# DCS Sortie MCP conventions
 - \`dcs_status\` and \`dcs_get_log_errors\` read Saved Games/DCS/Logs/dcs.log and work with DCS closed.
   It is the only place a Mission Editor load failure or a mission script error is reported.
 `;
+
+/**
+ * Sent to the client at connect. Clients truncate long instructions (Claude Code cut the old
+ * 11.5k-character version at about 4k), so this stays a short routing table plus the rules that
+ * must never be missed, most important first. tests/guide.test.ts holds it under 2500 characters.
+ */
+export const SERVER_INSTRUCTIONS = `DCS World mission authoring (offline .miz) and live control of a running sim.
+BEFORE AUTHORING read resource dcs://guide/conventions (full rules). Complete mission with evidence: prompt produce_mission / dcs://skills/mission-production.
+
+Which tool:
+- Live or offline? dcs_bridge_status (phase must be "running" for live tools); after loading read dcs_get_log_errors.
+- Whole mission from a spec: dcs_scenario_generate. Edit a file: dcs_miz_open/new -> dcs_miz_* -> dcs_miz_validate -> dcs_miz_save_as (always a new file).
+- Unit ids: dcs_list_unit_types (never guess; playerFlyable=false means AI-only). Real orders of battle: dcs_country_inventory.
+- Flights: dcs_list_flight_roles -> dcs_miz_create_flight / configure_flight. SAM sites: dcs_list_site_templates. Airfield dressing: dcs_miz_populate_airfield. FARP/targets/naval: dcs_list_scene_templates.
+- Triggers: dcs_miz_add_trigger (dcs_miz_trigger_capabilities lists the surface); scripts: dcs_miz_load_scripts. Audio: dcs_audio_convert (file or speech).
+- Unknown tool? dcs_tool_catalogue query=<words>.
+
+Never miss:
+- Map x = NORTH, y = EAST metres; headings in DEGREES.
+- Player flights default to 2 aircraft; only the lead is Player.
+- ATC: pass atc to create_flight/configure_flight for player flights. Spoken (ElevenLabs key or Windows voices + FFmpeg) -> scripted ATC replaces DCS's. No voice possible -> DCS's own ATC is kept and only the briefing is written.
+- A flight spawns only at an airfield its side owns (start tools claim neutral ones).
+- Populate airfields to ~17% of slots (default), never full.
+- Check ground points with dcs_check_terrain when live; water = inert units.
+- ERROR = DCS cannot load the file; WARNINGs come from files DCS flies.
+- Saves go to DCS_MISSION_OUTPUT_DIR; use the returned outPath.
+- New features are offline-tested unless a tool says DCS-verified.`;

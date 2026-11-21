@@ -85,6 +85,11 @@ export const atcSchema = z.object({
   }).strict().optional(),
   /** Silence DCS's own ATC at the departure and arrival airfields. */
   silenceDcsAtc: z.boolean().default(true),
+  /**
+   * false: write only the briefing and leave every radio exchange to DCS's own ATC (and a real AI AWACS).
+   * writeFlightAtc chooses this when no voice can be produced (no ElevenLabs key/Windows voices, or no FFmpeg).
+   */
+  exchanges: z.boolean().default(true),
   /** Height above ground at which the airborne handoff fires. */
   departureAGLMetres: z.number().positive().max(5000).default(300),
   /** Resource keys (dcs_audio_convert + dcs_miz_embed_asset) played to the group with each line. */
@@ -162,9 +167,10 @@ function writeAtc(mission: LuaTable, g: string, spec: z.output<typeof atcSchema>
   const theatre = String(mission.theatre ?? '');
   const notes: string[] = [];
   const depId = Number(points[0]?.airdromeId);
-  const hasDeparture = Number.isInteger(depId) && depId > 0;
-  const arrId = spec.arrival?.airfield !== undefined ? findAirport(theatre, spec.arrival.airfield).id : landingAirdrome(points);
-  if (!hasDeparture && arrId === undefined && !spec.awacs) {
+  const scripted = spec.exchanges;
+  const hasDeparture = scripted && Number.isInteger(depId) && depId > 0;
+  const arrId = !scripted ? undefined : spec.arrival?.airfield !== undefined ? findAirport(theatre, spec.arrival.airfield).id : landingAirdrome(points);
+  if (scripted && !hasDeparture && arrId === undefined && !spec.awacs) {
     throw new Error(`'${g}' neither starts at an airfield nor has a Landing waypoint, and no awacs was given: there is no exchange to script. Add dcs_miz_add_airfield_landing or pass arrival.airfield.`);
   }
   if (spec.departure.holdShortZone && !luaArray(asTable(asTable(mission.triggers)?.zones)).some(z => z.name === spec.departure.holdShortZone)) {
@@ -209,7 +215,7 @@ function writeAtc(mission: LuaTable, g: string, spec: z.output<typeof atcSchema>
   const result: AtcResult = { group: g, silenced: [], flags: {}, triggers, lines, briefing: '', notes };
 
   const silence = [...new Set([hasDeparture ? depId : undefined, arrId].filter((id): id is number => id !== undefined))];
-  if (spec.silenceDcsAtc && silence.length) {
+  if (scripted && spec.silenceDcsAtc && silence.length) {
     add('silence DCS ATC', [], silence.map(id => ({ kind: 'set_atc_silent_mode', airdromeId: id, silent: true } as ActionSpec)), 'start');
     result.silenced = silence.map(id => airfieldRadio(theatre, id).name);
   }
@@ -256,15 +262,15 @@ function writeAtc(mission: LuaTable, g: string, spec: z.output<typeof atcSchema>
       { kind: 'set_flag', flag: fAirborne },
       ...line(`${cs}: ${tower}, ${cs}, airborne.`, 'departureCall'),
       ...line(`${tower}: ${cs}, ${spec.departure.instruction ? `${spec.departure.instruction}, ` : ''}${next}. Good day.`, 'departureReply', delay),
-      ...(spec.awacs ? [item(ITEM.awacs, fAwacs)] : []),
+      ...(scripted && spec.awacs ? [item(ITEM.awacs, fAwacs)] : []),
     ]);
   } else {
     openers.push({ kind: 'set_flag', flag: fAirborne });
-    if (spec.awacs) openers.push(item(ITEM.awacs, fAwacs));
+    if (scripted && spec.awacs) openers.push(item(ITEM.awacs, fAwacs));
     if (spec.departure.runway || spec.departure.holdShortZone) notes.push(`'${g}' starts in the air: departure settings are ignored.`);
   }
 
-  if (spec.awacs) {
+  if (scripted && spec.awacs) {
     add('AWACS check-in', [{ kind: 'flag_is_true', flag: fAwacs }], [
       drop(ITEM.awacs),
       ...line(`${cs}: ${spec.awacs.callsign}, ${cs}, checking in, flight of ${units.length}${result.departure ? `, airborne ${result.departure.airfield}` : ''}.`, 'awacsCheckIn'),
@@ -323,6 +329,10 @@ function writeAtc(mission: LuaTable, g: string, spec: z.output<typeof atcSchema>
     inbound: fInbound, landing: fLanding, clear: fClear, outbound: fAway }));
   const used = ATC_AUDIO_STEPS.filter(s => (s.startsWith('startup') || s.startsWith('taxi') && s !== 'taxiToParking' || s.startsWith('takeoff') || s.startsWith('departure')) ? hasDeparture
     : s.startsWith('awacs') ? !!spec.awacs : (s === 'briefing' ? true : arrId !== undefined));
+  if (!scripted) {
+    notes.push("Briefing only: DCS's own ATC (and any AI AWACS) handles every radio exchange; no airfield was silenced.");
+    return result;
+  }
   const missing = used.filter(s => !spec.audio?.[s]);
   if (missing.length) notes.push(`No audio for: ${missing.join(', ')} - those lines are text only. Convert files with dcs_audio_convert, embed them, and pass audio.<step> = resource key.`);
   if (arrId === undefined) notes.push(`No arrival scripted: '${g}' has no Landing waypoint. Add one with dcs_miz_add_airfield_landing (or pass arrival.airfield) to get approach/tower/ground on the way home.`);

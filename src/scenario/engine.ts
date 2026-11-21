@@ -210,7 +210,7 @@ export function generateScenario(input: unknown, opts: { deferAtc?: boolean } = 
           ...(awacs ? { awacs: { group: awacs.name, tasking: `Proceed as briefed: ${spec.objective}`.slice(0, 1000) } } : {}),
         };
         if (opts.deferAtc) atcRequest = { group: spec.player.group, atc: request };
-        else warnings.push(...addFlightAtc(s.mission, spec.player.group, { ...request, voice: false }, s.dictionary).notes.map(n => `ATC: ${n}`));
+        else warnings.push(...addFlightAtc(s.mission, spec.player.group, { ...request, exchanges: false }, s.dictionary).notes.map(n => `ATC: ${n}`));
       }
     }
     for (const zone of spec.zones) addTriggerZone(s.mission, zone);
