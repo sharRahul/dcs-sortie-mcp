@@ -3,8 +3,9 @@ import assert from "node:assert/strict";
 import { CONVENTIONS_GUIDE, SERVER_INSTRUCTIONS } from "../src/guide.js";
 
 test("server instructions stay short enough that clients do not truncate them", () => {
-  // Claude Code cut the old 11.5k-character instructions at about 4k; keep a margin.
-  assert.ok(SERVER_INSTRUCTIONS.length <= 2500, `SERVER_INSTRUCTIONS is ${SERVER_INSTRUCTIONS.length} characters`);
+  // Measured: Claude Code showed the old 11.5k-character instructions only up to character 4081.
+  // 3800 stays under that cut with a small margin; other clients publish no limit.
+  assert.ok(SERVER_INSTRUCTIONS.length <= 3800, `SERVER_INSTRUCTIONS is ${SERVER_INSTRUCTIONS.length} characters`);
   assert.match(SERVER_INSTRUCTIONS.slice(0, 300), /dcs:\/\/guide\/conventions/);
   for (const rule of [/NORTH/, /DEGREES/, /2 aircraft/, /DCS's own ATC is kept/, /17%/]) assert.match(SERVER_INSTRUCTIONS, rule);
 });

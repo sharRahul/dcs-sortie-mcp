@@ -1199,5 +1199,5 @@ with tests. The rules they leave behind:
   text-only scripted ATC and is honoured. The sync scenario path (production/acceptance/campaign) writes `exchanges: false`.
 - `SERVER_INSTRUCTIONS` (src/guide.ts) is a ~1.9k-character routing table + must-not-miss rules; Claude Code truncated the
   old 11.5k version at ~4k, so every rule after the map-axes line never reached the model. The full text is `FULL_RULES`,
-  served first in `dcs://guide/conventions`. `tests/guide.test.ts` holds the instructions <= 2500 chars: put new detail in
+  served first in `dcs://guide/conventions`. `tests/guide.test.ts` holds the instructions <= 3800 chars (measured cut: character 4081): put new detail in
   FULL_RULES, and only a rule a model must never miss in the instructions.

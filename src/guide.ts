@@ -244,7 +244,7 @@ ${FULL_RULES}
 /**
  * Sent to the client at connect. Clients truncate long instructions (Claude Code cut the old
  * 11.5k-character version at about 4k), so this stays a short routing table plus the rules that
- * must never be missed, most important first. tests/guide.test.ts holds it under 2500 characters.
+ * must never be missed, most important first. tests/guide.test.ts holds it under 3800 characters (Claude Code cut the old text at character 4081).
  */
 export const SERVER_INSTRUCTIONS = `DCS World mission authoring (offline .miz) and live control of a running sim.
 BEFORE AUTHORING read resource dcs://guide/conventions (full rules). Complete mission with evidence: prompt produce_mission / dcs://skills/mission-production.
