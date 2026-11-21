@@ -1180,8 +1180,12 @@ with tests. The rules they leave behind:
   mission-start trigger with no condition, exactly as the editor's SET ATC SILENT MODE does it.
 - `scripts/dev/sweep-base-dressing.ts`: statics/vehicles within 3 km of bundled airfields across ~3000 ME-saved missions,
   with distance to the nearest slot. `AIRFIELD_SUPPORT_KITS` (dressing.ts) takes the most-used types within 120 m of slots;
-  offsets behind the tail are OUR convention. `populateAirfield` adds the kit by default (`support`), `addFlightRampSupport`
-  dresses parking-start flights (scenario engine does it for every non-late-activated air force). Kit objects never land on a parking slot footprint or within 6 m of another
+  offsets behind the tail are OUR convention. `populateAirfield` adds the kit by default (`support`) behind STATIC aircraft only.
+  LIVE (2026-11-21, `scripts/dev/build-ramp-check-mission.mjs`, AI only, no pilot): a parked FLIGHT is written with heading 0 and
+  DCS turns it to the slot's own direction at spawn (Kutaisi: 2.867 rad); a kit placed 'behind' it from the file heading sat
+  11-22 m in FRONT and all four Kutaisi AI jets never moved in 10 min, while Senaki's (kit behind by luck) all took off with
+  zero HIT/CRASH. So flight ramp kits were removed: slot orientation is not in the data. Same run: 0 of 58 kit/parked objects
+  within 12 m of scenery (hangars/buildings); 39 on concrete (surface 5 = runway/taxiway/apron), 19 on grass at the apron edge. Kit objects never land on a parking slot footprint or within 6 m of another
   object (`kitSpot` tries behind, further back, then sideways; else skipped and counted). Occupancy: corpus median 17% of
   aircraft slots used (p25 10%, p75 29%, p90 38%, 4235 airfield instances); populate defaults to the median and caps at 38%
   (`TYPICAL_OCCUPANCY`/`MAX_OCCUPANCY`) - never fill an airfield. Taxiways/buildings are not in the data. Base SAM/AAA in the corpus

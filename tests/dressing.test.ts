@@ -5,7 +5,6 @@ import { asTable, luaArray, parseLuaAssignment, type LuaTable } from "../src/miz
 import { addAircraftGroup, addGroundGroup, findGroup, findUnit, newMissionTable } from "../src/miz/authoring.js";
 import {
   addFarp,
-  addFlightRampSupport,
   addTargetArea,
   findNavalTemplate,
   NAVAL_TEMPLATES,
@@ -143,19 +142,11 @@ test("parked aircraft get the corpus-derived ground support kit behind the tail;
   assert.equal(populateAirfield(m, { side: "blue", country: "USA", airfield: "Kutaisi", types: ["F-16C_50"], count: 1, namePrefix: "N", support: false }).support.length, 0);
 });
 
-test("a parking-start flight gets ramp support; an air start does not", () => {
-  const m = newMissionTable("Caucasus", 43200);
-  addAircraftGroup(m, "plane", { side: "blue", country: "USA", name: "Cold", type: "F-16C_50", count: 2, x: 0, y: 0, start: { kind: "parking_cold", airfield: "Kutaisi" } });
-  addAircraftGroup(m, "plane", { side: "blue", country: "USA", name: "Air", type: "F-16C_50", count: 2, x: 0, y: 0 });
-  assert.equal(addFlightRampSupport(m, "Cold", "blue", "USA").length, 8);
-  assert.equal(addFlightRampSupport(m, "Air", "blue", "USA").length, 0);
-});
 
 test("populate defaults to the corpus-typical occupancy, caps at 38%, and support never lands on a slot or an object", () => {
   for (const [th, af] of [["Caucasus", "Kutaisi"], ["PersianGulf", "Al Dhafra AFB"], ["Syria", "Incirlik"]]) {
     const m = newMissionTable(th, 43200), ap = findAirport(th, af);
     addAircraftGroup(m, "plane", { side: "blue", country: "USA", name: "Cold", type: "F-16C_50", count: 2, x: 0, y: 0, start: { kind: "parking_cold", airfield: af } });
-    addFlightRampSupport(m, "Cold", "blue", "USA");
     const r = populateAirfield(m, { side: "blue", country: "USA", airfield: af, types: ["F-16C_50"], namePrefix: "P" });
     const aircraftSlots = ap.slots.filter(s => (s[4] & 6) !== 0).length;
     assert.ok(r.placed.length + 2 <= Math.round(0.17 * aircraftSlots) + 1, af);

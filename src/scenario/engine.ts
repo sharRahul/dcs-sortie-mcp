@@ -5,7 +5,6 @@ import { actionSchema, conditionSchema, triggerSchema } from '../miz/trigger-sch
 import { addAircraftGroup, addGroundGroup, addTrigger, addTriggerZone, addWaypoint, findGroup, findUnit, setPayload, type AircraftStart, type ConditionSpec, type ActionSpec } from '../miz/authoring.js';
 import { configureFlight, createFlight, flyingReference, orbitSchema, ROLES, appendWaypointTask } from '../miz/flight.js';
 import { addFlightAtc, atcSchema } from '../miz/atc.js';
-import { addFlightRampSupport } from '../miz/dressing.js';
 import { findSiteTemplate } from '../miz/templates.js';
 import { createGroundPlan, validateGroundPlan, groundPlanSchema, groundMovementSchema } from '../miz/operations.js';
 import { addFarp } from '../miz/dressing.js';
@@ -199,8 +198,6 @@ export function generateScenario(input: unknown, opts: { deferAtc?: boolean } = 
     }
     // A flight cannot spawn at an airfield its side does not own (DCS 2.9.31, verified).
     warnings.push(...claimStartAirfields(s));
-    // Parked flights get the ground support editor-saved missions put beside parked aircraft.
-    for (const f of spec.forces) if ((f.category === 'plane' || f.category === 'helicopter') && f.side !== 'neutrals' && !f.lateActivation) addFlightRampSupport(s.mission, f.name, f.side, f.country);
     // The player's radio is scripted end to end in place of DCS ATC, unless the spec opts out.
     if (spec.player.atc !== false) {
       const pg = findGroup(s.mission, spec.player.group)!.group;

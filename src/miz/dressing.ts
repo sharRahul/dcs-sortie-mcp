@@ -873,34 +873,3 @@ export function autoAirWing(
   return { squadrons, dropped, basis };
 }
 
-/**
- * Ground support (AIRFIELD_SUPPORT_KITS) behind every unit of a flight that starts on a
- * parking slot, so the player's own ramp is not bare. Skips groups not on parking (air
- * starts, runway, ships, FARPs). Offsets are our convention, behind the unit's heading.
- */
-export function addFlightRampSupport(mission: LuaTable, groupName: string, side: Side, country: string): string[] {
-  const found = findGroup(mission, groupName);
-  if (!found) throw new Error(`No group named '${groupName}'`);
-  const p1 = asTable(asTable(asTable(found.group.route)?.points)?.[1]);
-  if (!(Number(p1?.airdromeId) > 0) || !/Parking/.test(String(p1?.type ?? ''))) return [];
-  const kit = AIRFIELD_SUPPORT_KITS[side === "red" ? "red" : "blue"];
-  const names: string[] = [];
-  const theatreName = resolveTheatreName(String(mission["theatre"] ?? ""));
-  let slots: ParkingSlotTuple[] = [];
-  try { if (theatreName) slots = findAirport(theatreName, Number(p1!.airdromeId)).slots; } catch { /* unbundled: object check only */ }
-  const pts = objectPoints(mission);
-  luaArray(asTable(found.group.units)).forEach((u, i) => {
-    const h = Number(u.heading) || 0, fwd = [Math.cos(h), Math.sin(h)], right = [-Math.sin(h), Math.cos(h)];
-    const items = [...kit.statics.map((t, k) => ({ t, f: -13, r: (k - 1) * 6 })), { t: kit.vehicles[i % kit.vehicles.length], f: -23, r: 0 }];
-    items.forEach(({ t, f, r }, k) => {
-      const name = `${groupName}-${i + 1}-svc-${k + 1}`;
-      const spot = kitSpot(slots, pts, Number(u.x), Number(u.y), fwd, right, f, r);
-      if (!spot) return;
-      const [x, y] = spot;
-      pts.push([x, y]);
-      addStatic(mission, { side, country, name, type: t, x, y, heading: h / DEG });
-      names.push(name);
-    });
-  });
-  return names;
-}
