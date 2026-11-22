@@ -1497,3 +1497,17 @@ descriptions point to it. Both CLIs were rerun with the same prompt on the reins
   then deleted 17 old voice files one call at a time before a voiced replace could embed new ones; that is what
   the audio half of `replace` now does (test `voiced atc.replace drops the old script's embedded lines`, run with
   real Windows voices). The CLI was not rerun after that last fix. Mission VERIFY OK.
+
+## Desktop apps building a mission unprompted (2026-11-22)
+
+After restarting both apps, the user pasted the same request (no tool names) into a new chat in Claude Desktop
+and in ChatGPT desktop. Watched from the server side only (session snapshots and the mission output folder): the
+chats themselves are stored by the vendors, so the exact tool sequence is not visible from this machine.
+- Claude Desktop (server: config entry, repo `dist`): `My Mission/Fulda_Gap_Dawn_A10C.miz` saved about 4 min after
+  start; GermanyCW, 7 groups / 30 units, 24 compiled trigger chunks. VERIFY OK.
+- ChatGPT desktop (server started by codex.exe from repo `dist`): production project `Iron_Shield_Production`,
+  r-0001 (20 groups) then edits (+12 triggers, consistent with scripted ATC; +4 groups) and r-0002, then
+  `My Mission/Operation_Iron_Shield_1989.miz`, about 30 min; GermanyCW, 24 groups / 66 units, 87 compiled trigger
+  chunks. VERIFY OK.
+Not established from here: whether either app's model called `dcs_tool_catalogue guide=archetypes|scenario`
+(visible only in the app's chat), and neither mission flown.
