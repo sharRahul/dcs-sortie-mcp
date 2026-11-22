@@ -1511,3 +1511,13 @@ chats themselves are stored by the vendors, so the exact tool sequence is not vi
   chunks. VERIFY OK.
 Not established from here: whether either app's model called `dcs_tool_catalogue guide=archetypes|scenario`
 (visible only in the app's chat), and neither mission flown.
+
+## Release 0.1.1 (2026-11-22)
+
+Source commit `7b1c273` (version bump in `fb5ed3c` + plugin manifest version in `7b1c273`). Local gates: audit 0
+vulnerabilities, check, build, 432/432 tests with DCS Lua, package/bundle/plugin build + verify. GitHub: CI
+`44970136722` and Build installable packages `44970136765` succeeded on that exact commit, 6 jobs, zero
+warning/failure annotations. Prepare GitHub release `44970528388` created tag `v0.1.1` (resolves to `7b1c273`)
+and a draft; all four assets downloaded and matched `SHA256SUMS.txt`; `release-acceptance.json` names the same
+commit and runs. "What's new" notes added, then published as Latest:
+https://github.com/sharRahul/dcs-sortie-mcp/releases/tag/v0.1.1
