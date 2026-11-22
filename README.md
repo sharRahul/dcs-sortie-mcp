@@ -1,6 +1,6 @@
 # DCS Sortie MCP
 
-> NOTE: An independent open-source project for DCS World. Not affiliated with or endorsed by Eagle Dynamics.
+> **NOTE:** This is an independent open-source project for DCS World. Not affiliated with or endorsed by Eagle Dynamics.
 
 **Create and edit DCS World missions by talking to your AI assistant.**
 
