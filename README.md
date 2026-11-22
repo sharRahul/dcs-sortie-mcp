@@ -59,6 +59,12 @@ Then ask for changes:
 
 For an existing mission, give the assistant its full file path and describe what to change.
 
+Not sure what to fly? Ask for ideas first:
+
+> Give me three Cold War A-10C mission ideas over Germany, recommend one, then build it and save it.
+
+The assistant can draw on 14 built-in mission types (deep strike, tank breakthrough, emergency close air support, SEAD, airbase scramble, fleet defence, combat air patrol, escort, convoy hunt, helicopter operations, strike package, historical, night) and on ready-made example scenarios.
+
 ## Fly the mission
 
 1. Find the `.miz` file at the path your assistant gives you.

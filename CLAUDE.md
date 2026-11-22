@@ -1207,3 +1207,26 @@ with tests. The rules they leave behind:
   old 11.5k version at ~4k, so every rule after the map-axes line never reached the model. The full text is `FULL_RULES`,
   served first in `dcs://guide/conventions`. `tests/guide.test.ts` holds the instructions <= 3800 chars (measured cut: character 4081): put new detail in
   FULL_RULES, and only a rule a model must never miss in the instructions.
+
+## Acceptance matrix, client checks, mission guides (2026-11-21/22)
+
+- `docs/testing/live-acceptance/acceptance-matrix.md` is the CURRENT live status (PASS / PARTIAL / OPEN /
+  SUPERSEDED, each row citing verification.md). Older result files are historical; update the matrix, not them.
+- `scripts/dev/client-install-smoke.mjs` starts the server exactly as each INSTALLED client stores it (Claude
+  Desktop config + `.mcpb`, Codex `config.toml`, ChatGPT plugin cache) and runs a 50-call session. It proves the
+  launch entry, not the app's UI. After rebuilding (`bundle:build`, `plugin:build`) the installed copies must be
+  replaced and the apps restarted: an old copy reports server name `dcs-mcp-server`.
+- Model-driven checks: `codex exec --json` and `claude -p --output-format stream-json` with a plain request (no
+  tool names) show which tools a real model picks. Both found the guides unprompted and built missions that pass
+  `verify-mission.mjs`. Desktop app chats live on vendor servers: watch the server side (session snapshots, output
+  folder) and ask the user for the tool list.
+- `dcs_tool_catalogue guide=archetypes|checklist|scenario [topic]` serves the mission-production guides through a
+  TOOL, because some clients never let the model read a resource. `skills/dcs-mission-production/references/
+  mission-archetypes.md` holds 14 recipes (themes only; no channel names, no real order of battle).
+- `atc.replace=true` (create/configure_flight) removes the flight's own `ATC <group>:` triggers, zones and
+  `atc_<group>_*.ogg` voice files, then writes the new script (restored if voicing fails). Without it a second
+  script is still refused. Found by a model deleting 12 triggers and 17 files one call at a time.
+- Hook `runtime` refuses unless `phase == "running"` (verified live from the menu; it used to hit `env.mission` nil).
+- FARP: authored FARPs are DCS airbases (`Airbase.getByName` -> helipad); AI lands on them via linked or plain
+  `Land` points. Keep FARPs away from airfields: one 3 km from Kutaisi made AI return landings hover near Kutaisi.
+  AI parked by the support group is NOT refuelled (10 min observed). `UH-1H` has no internal gun.
