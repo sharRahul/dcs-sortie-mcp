@@ -38,7 +38,7 @@ async function elevenLabs(text: string, voice: string | undefined, model: string
   const voiceId = voice ?? process.env.ELEVENLABS_VOICE_ID?.trim();
   if (!voiceId) throw new Error('No ElevenLabs voice: pass voice (a voice id from your ElevenLabs voice library) or set ELEVENLABS_VOICE_ID.');
   if (!/^[A-Za-z0-9]{1,64}$/.test(voiceId)) throw new Error(`'${voiceId}' is not an ElevenLabs voice id`);
-  const res = await fetch(`https://api.elevenlabs.io/v1/text-to-speech/${voiceId}?output_format=mp3_44100_128`, {
+  const res = await fetch(`https://api.elevenlabs.io/v1/text-to-speech/${encodeURIComponent(voiceId)}?output_format=mp3_44100_128`, {
     method: 'POST',
     headers: { 'xi-api-key': key, 'content-type': 'application/json', accept: 'audio/mpeg' },
     body: JSON.stringify({ text, model_id: model }),

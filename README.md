@@ -83,6 +83,8 @@ Existing source missions are preserved. Replacing an existing output requires an
 
 [App connection guide](docs/user/clients.md) · [Example scenarios](examples/scenarios/README.md) · [Technical reference](docs/reference/technical-reference.md) · [Tested features and limits](docs/development/verification.md) · [Report a problem](https://github.com/sharRahul/dcs-sortie-mcp/issues)
 
+Want to help? See [Contributing](CONTRIBUTING.md). Found a security problem? See [Security](SECURITY.md) to report it privately.
+
 For contributors: [documentation index](docs/README.md), [project scripts](scripts/README.md) and [building and publishing releases](docs/development/releasing.md).
 
 DCS Sortie MCP is licensed under [Apache 2.0](LICENSE) © [github.com/sharRahul](https://github.com/sharRahul). Included community Lua frameworks retain [their own licenses and credits](vendor/lua/README.md).
