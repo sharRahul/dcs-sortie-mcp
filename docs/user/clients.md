@@ -9,7 +9,7 @@ Install Node.js 20+ first. Download **Others** (also used by Codex) from the [la
 Open a terminal in a permanent folder you want to keep, and run this with the actual tarball path:
 
 ```powershell
-npm install --prefix ./dcs-tools --ignore-scripts "C:\Downloads\dcs-sortie-mcp-0.1.0.tgz"
+npm install --prefix ./dcs-tools --ignore-scripts "C:\Downloads\dcs-sortie-mcp-0.1.1.tgz"
 node ./dcs-tools/node_modules/dcs-sortie-mcp/dist/index.js --version
 ```
 

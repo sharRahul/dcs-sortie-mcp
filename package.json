@@ -1,6 +1,6 @@
 {
   "name": "dcs-sortie-mcp",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "private": true,
   "mcpName": "io.github.sharRahul/dcs-sortie-mcp",
   "description": "Model Context Protocol server for DCS World: offline .miz mission authoring and inspection, plus a live-control bridge into a running sim",
