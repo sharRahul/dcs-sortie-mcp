@@ -247,7 +247,7 @@ ${FULL_RULES}
  * must never be missed, most important first. tests/guide.test.ts holds it under 3800 characters (Claude Code cut the old text at character 4081).
  */
 export const SERVER_INSTRUCTIONS = `DCS World mission authoring (offline .miz) and live control of a running sim.
-BEFORE AUTHORING read resource dcs://guide/conventions (full rules) and dcs://skills/mission-production/checklist (what a mission needs, in build order, tool per item). Mission ideas: dcs_tool_catalogue guide=archetypes [topic=<words>]; scenario spec examples: guide=scenario [topic=<name>]. Complete mission with evidence: prompt produce_mission / dcs://skills/mission-production.
+BEFORE AUTHORING read resource dcs://guide/conventions (full rules) and dcs://skills/mission-production/checklist (mission execution order and every tool grouped into purpose-based toolsets). Retrieve one toolset with dcs_tool_catalogue guide=checklist topic=<id>, e.g. terrain-placement, mission-scripting, voice-comms. Follow the build-order table: plan/shell -> platforms/flights -> ordered start scripts -> payloads -> terrain-checked ground forces -> scenery -> routes/tasks/logic -> controller voices/briefing -> validate/save -> authorised flight evidence. Mission ideas: dcs_tool_catalogue guide=archetypes [topic=<words>]; scenario spec examples: guide=scenario [topic=<name>]. Complete mission with evidence: prompt produce_mission / dcs://skills/mission-production.
 
 Which tool:
 - Live or offline? dcs_bridge_status (phase must be "running" for live tools); after loading read dcs_get_log_errors.

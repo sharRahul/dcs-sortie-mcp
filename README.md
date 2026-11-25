@@ -59,6 +59,11 @@ Then ask for changes:
 
 For an existing mission, give the assistant its full file path and describe what to change.
 
+The [mission build order and toolsets](skills/dcs-mission-production/references/mission-content.md#agent-routing-and-mission-build-order)
+cover placement, ordered Lua scripts, payloads, terrain, scenery, routes, controller voices and verification.
+Agents can read the same guide with `dcs_tool_catalogue guide=checklist`; add `topic=terrain-placement`,
+`topic=mission-scripting` or `topic=voice-comms` to retrieve one toolset with its prerequisites and calling order.
+
 Not sure what to fly? Ask for ideas first:
 
 > Give me three Cold War A-10C mission ideas over Germany, recommend one, then build it and save it.

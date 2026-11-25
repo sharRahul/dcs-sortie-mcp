@@ -19,6 +19,19 @@ test("guide=checklist returns the build-order checklist", async () => {
   assert.ok(c.text.length > 500);
 });
 
+test("each toolset is retrievable without leaking another toolset", async () => {
+  const all = await readGuide("checklist");
+  const ids = all.sections.filter(s => s.endsWith(" toolset")).map(s => s.replace(/ toolset$/, ""));
+  assert.equal(ids.length, 20);
+  for (const id of ids) {
+    const section = await readGuide("checklist", id);
+    assert.ok(section.text.startsWith(`### ${id} toolset`), id);
+    assert.equal((section.text.match(/^### /gm) ?? []).length, 1, id);
+    assert.match(section.text, /\*\*When \/ order:\*\*/);
+  }
+  await assert.rejects(readGuide("checklist", "missing-toolset"), /No checklist section matches/);
+});
+
 test("guide=scenario lists the examples and returns one full spec that validates", async () => {
   const all = await readGuide("scenario");
   assert.ok(all.sections.includes("cas-a10c.json"));

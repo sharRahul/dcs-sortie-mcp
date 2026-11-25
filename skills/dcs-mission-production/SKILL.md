@@ -9,6 +9,15 @@ Carry the user's mission intent through a durable project, immutable revisions a
 
 ## Start or resume
 
+Use the mission checklist's **Agent routing and mission build order** table as the execution sequence. Its
+complete toolset inventory assigns every tool one primary purpose, with prerequisites and calling order.
+Retrieve a single set with `dcs_tool_catalogue guide=checklist topic=<id>` (for example `terrain-placement`,
+`mission-scripting` or `voice-comms`). Place carrier/FARP platforms before their flights, load requested Lua
+libraries in one ordered start trigger, then check payloads, terrain under formations and site footprints,
+routes/tasks/outcomes, and finally controller voices. Add dependent IADS/controller setup after its named
+groups exist; generate spoken briefings after routes, frequencies and recovery are final. Validate/save and
+collect authorised flight evidence before claiming observed behaviour.
+
 Read dcs://guide/conventions and, for what a complete mission contains and which tool builds each part, [the mission checklist](references/mission-content.md) (dcs://skills/mission-production/checklist). For mission ideas, [the mission archetypes](references/mission-archetypes.md) turn a short request into a build plan (`dcs_tool_catalogue guide=archetypes topic=<words>`); for a dcs_scenario_generate specification, start from a shipped example (`dcs_tool_catalogue guide=scenario topic=<name>`). Clients that cannot read resources get both through that tool. If a project already exists, call dcs_production_status and continue its next actions. Otherwise record the objective, theatre, player/start, forces, outcomes, dependencies and assumptions. Resolve only missing decisions that materially affect the mission; use stated constraints and reasonable defaults for routine choices.
 
 Check exact types, installed dependencies, terrain/footprints, aircraft coverage and historical scope before promising fidelity. dcs_authoring_coverage_audit distinguishes available records from missing evidence. Generic layouts, unsupported pairings and missing service dates stay explicit.

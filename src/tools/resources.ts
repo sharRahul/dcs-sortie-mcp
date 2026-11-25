@@ -24,7 +24,7 @@ export function registerResources(server: McpServer): void {
     ['mission-production-contracts','dcs://skills/mission-production/contracts','references/workflow.md'],
     ['mission-content-checklist','dcs://skills/mission-production/checklist','references/mission-content.md'],
     ['mission-archetypes','dcs://skills/mission-production/archetypes','references/mission-archetypes.md'],
-  ] as const) server.registerResource(name,uri,{title:name==='mission-production-skill'?'DCS mission production skill':name==='mission-content-checklist'?'What goes into a mission':name==='mission-archetypes'?'Mission archetypes':'Mission production tool contracts',description:name==='mission-content-checklist'?'Build order and checklist for a complete mission: shell, player flight, support, threats, scenery, briefing/ATC, logic, validation - with the tool for each item.':name==='mission-archetypes'?'Fourteen common mission types (deep interdiction, Fulda Gap, emergency CAS, SEAD, scramble, fleet defense, CAP, escort, convoy/SCUD hunt, helicopter ops, strike package, historical, night) as build recipes with tools and verified status.':'Built-in workflow for planning, generation, validation, revision and flight evidence.',mimeType:'text/markdown'},async address=>({contents:[{uri:address.href,mimeType:'text/markdown',text:await readFile(packagePath('skills','dcs-mission-production',relative),'utf8')}]}));
+  ] as const) server.registerResource(name,uri,{title:name==='mission-production-skill'?'DCS mission production skill':name==='mission-content-checklist'?'Mission build order and toolsets':name==='mission-archetypes'?'Mission archetypes':'Mission production tool contracts',description:name==='mission-content-checklist'?'Mission execution order and complete toolsets: when to call every tool, prerequisites, platforms/flights, ordered Lua, payloads, terrain, scenery, routes/logic, voices and validation.':name==='mission-archetypes'?'Fourteen common mission types (deep interdiction, Fulda Gap, emergency CAS, SEAD, scramble, fleet defense, CAP, escort, convoy/SCUD hunt, helicopter ops, strike package, historical, night) as build recipes with tools and verified status.':'Built-in workflow for planning, generation, validation, revision and flight evidence.',mimeType:'text/markdown'},async address=>({contents:[{uri:address.href,mimeType:'text/markdown',text:await readFile(packagePath('skills','dcs-mission-production',relative),'utf8')}]}));
 
   server.registerResource(
     "conventions",
@@ -142,14 +142,17 @@ export function registerPrompts(server: McpServer): void {
             type: "text",
             text:
               `Build a DCS mission on ${theatre}: ${objective}. Save it to ${outPath}.\n\n` +
-              `For a complete mission production project, read dcs://skills/mission-production and use produce_mission; preserve the requested output location. Read dcs://guide/conventions first. Then: dcs_miz_new (theatre ${theatre}) → find exact type ids with ` +
-              `dcs_list_unit_types and country names with dcs_list_countries → place things with lat/lon or x/y ` +
-              `(x = north) → use dcs_list_site_templates for air defences and dcs_list_airfields for airfield starts → ` +
-              `add zones and triggers (dcs_miz_add_trigger_zone, dcs_miz_add_trigger) → frameworks with ` +
-              `dcs_miz_load_scripts if needed → dcs_miz_set_mission_options, dcs_miz_set_weather, dcs_miz_set_briefing → ` +
+              `For a complete mission production project, read dcs://skills/mission-production and use produce_mission. ` +
+              `Read dcs://guide/conventions and dcs_tool_catalogue guide=checklist first. Follow its execution-order ` +
+              `table and toolsets (guide=checklist topic=<id> retrieves one set): check installation/exact types and ` +
+              `objectives → dcs_miz_new (theatre ${theatre}) and mission settings → place carrier/FARP platforms ` +
+              `before their aircraft/helicopters → dcs_miz_load_scripts for requested frameworks in one ordered ` +
+              `start trigger → check payloads/fuel → terrain-checked ground forces and scenery → routes, recovery, ` +
+              `tasks, IADS setup, zones and outcome triggers → final frequencies, controller voices and briefing → ` +
               `dcs_miz_validate and fix every error → dcs_miz_save_as.\n\n` +
-              `Report what you could not verify offline (terrain under ground units needs dcs_check_terrain with a ` +
-              `mission running).`,
+              `Mission saves use DCS_MISSION_OUTPUT_DIR; only the filename of ${outPath} is kept. Use the returned ` +
+              `path. Report missing terrain/slope/clearance evidence and all behaviour not observed in DCS; ` +
+              `offline terrain analysis needs a sourced grid or matching pack. Flight-test only when authorised.`,
           },
         },
       ],

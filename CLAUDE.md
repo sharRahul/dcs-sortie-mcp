@@ -1223,6 +1223,11 @@ with tests. The rules they leave behind:
 - `dcs_tool_catalogue guide=archetypes|checklist|scenario [topic]` serves the mission-production guides through a
   TOOL, because some clients never let the model read a resource. `skills/dcs-mission-production/references/
   mission-archetypes.md` holds 14 recipes (themes only; no channel names, no real order of battle).
+- The checklist starts with the mission execution order and assigns every registered tool one primary
+  toolset. `guide=checklist topic=<id>` retrieves one set (e.g. `terrain-placement`, `mission-scripting`,
+  `voice-comms`) with prerequisites and calling order. Add new tools to the complete toolset inventory;
+  `mission-checklist.test.ts` checks coverage and unique assignment, and `catalogue-guide.test.ts` checks
+  topic routing. Keep build_mission, server instructions and the production skill aligned with that order.
 - `atc.replace=true` (create/configure_flight) removes the flight's own `ATC <group>:` triggers, zones and
   `atc_<group>_*.ogg` voice files, then writes the new script (restored if voicing fails). Without it a second
   script is still refused. Found by a model deleting 12 triggers and 17 files one call at a time.

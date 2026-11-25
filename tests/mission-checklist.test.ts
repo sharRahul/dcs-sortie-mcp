@@ -16,3 +16,15 @@ test("every registered tool appears in the mission checklist", () => {
   const missing = tools.filter(t => !named.has(t));
   assert.deepEqual(missing, [], `add these tools to skills/dcs-mission-production/references/mission-content.md: ${missing.join(", ")}`);
 });
+
+test("every registered tool has exactly one primary toolset", () => {
+  const inventory = guide.split("## Toolsets: complete tool inventory")[1];
+  assert.ok(inventory, "missing complete toolset inventory");
+  const sections = [...inventory.matchAll(/^### ([a-z-]+) toolset\r?\n([\s\S]*?)(?=^### |$(?![\s\S]))/gm)];
+  assert.equal(sections.length, 20);
+  const assigned = sections.flatMap(([, , body]) => [...body.matchAll(/^- `(dcs_[a-z0-9_]+)`$/gm)].map(m => m[1]));
+  assert.deepEqual(assigned.slice().sort(), tools.slice().sort(), "missing, unknown or multiply assigned tool");
+  for (const [, id, body] of sections) {
+    assert.match(body, /\*\*When \/ order:\*\*/, `missing routing guidance for ${id}`);
+  }
+});

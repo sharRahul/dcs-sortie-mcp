@@ -2,6 +2,10 @@
 
 Start with the [main README](../README.md) to install DCS MCP and create a mission.
 
+For agents: [mission build order and complete toolsets](../skills/dcs-mission-production/references/mission-content.md)
+categorises every registered tool and explains when to call it, its dependencies and the calling sequence.
+Available in-server as `dcs://skills/mission-production/checklist` or `dcs_tool_catalogue guide=checklist`.
+
 | Folder | What you will find |
 | --- | --- |
 | [User guides](user/clients.md) | Connecting your AI app, Claude Desktop setup and mission audio |
