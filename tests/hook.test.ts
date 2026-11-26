@@ -93,6 +93,9 @@ test(
     assert.match(output, /SIM_LOADMISSION_ANSWERED true/, `loadmission was not held for the sim frame:\n${output}`);
     // Over a running mission the swap reaches net.load_mission on the sim thread.
     assert.match(output, /LOADMISSION_SWAPPED true/, `loadmission did not call net.load_mission when running:\n${output}`);
+    for (const check of ['LOAD_REQUEST_PENDING', 'LOAD_NO_CHANGE', 'LOAD_IN_PROGRESS', 'LOAD_VERIFIED', 'LOAD_SAME_FILE_PENDING', 'LOAD_WRONG_FILE', 'LOAD_NO_FILENAME', 'LOAD_FALSE_REFUSED', 'LOAD_CALLBACK_FAILED']) {
+      assert.match(output, new RegExp(`${check} true`), output);
+    }
     // From the menu net.load_mission silently no-ops, so loadmission must refuse
     // with a clear error and must NOT call net.load_mission.
     assert.match(output, /COLD_MENU_REFUSED true/, `cold-menu loadmission did not refuse clearly:\n${output}`);

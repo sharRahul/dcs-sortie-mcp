@@ -32,7 +32,7 @@ Run these commands from the repository root. Mission generators and DCS-specific
 | `dev/build-verify-mission.mjs` | Generates a mission for checking features in DCS; documented in the verification record. |
 | `dev/iron-veil-airfields.mjs` | Shared airfield scenery helper, covered by `tests/iron-veil-airfields.test.ts`. |
 | `verify/verify-mission.mjs` | Checks a supplied mission file (`npm run verify:miz`). |
-| `dev/monitor-flight.mjs` | Collects simulator observations while flying (`npm run monitor`). |
+| `dev/monitor-flight.mjs` | Collects observations for one flight (`npm run monitor`); stops on mission identity changes and preserves uncorrelated log batches separately. |
 | `dev/generate-acceptance.mjs` | Generates repeatable acceptance missions (`npm run acceptance:generate`). |
 | `dev/collect-acceptance.mjs` | Collects evidence for acceptance checks (`npm run acceptance:collect`). |
 | `verify/verify-acceptance-lua.mjs` | Checks acceptance missions under Lua 5.1 (`npm run acceptance:lua51`). |

@@ -53,6 +53,17 @@ revision before collecting results. A running phase or accepted request can stil
 to the previous mission. Report an unchanged identity as an unverified load; do not
 restart an active user flight automatically.
 
+With the current installed hook, `dcs_bridge_status.response` exposes
+`missionFilename`, `missionGeneration`, `bridgeSession` and `loadRequest`.
+`loadRequest.status` starts as `requested`, becomes `loading` when lifecycle events
+arrive, and becomes `verified` only after a new running lifecycle reports the
+requested filename. `mismatch`, `unverified`, `not_observed` (no confirmation after
+30 seconds) and `failed` remain distinct outcomes. A late successful load can still
+replace `not_observed`; it is not a definite failure. Filename verification does
+not verify file bytes: retain saved hashes and production capture for that check.
+Reinstall the updated hook and restart DCS to use these fields; older hooks do not
+provide them.
+
 Keep startup, taxi/takeoff, recovery, weapon firing, audible playback and interactive
 controller responses as separate checks. A framework global, live group, radar warning
 or fired audio trigger does not prove the corresponding service works. Test AWACS with
@@ -63,6 +74,14 @@ For monitoring, record both the last successful observation time and the monitor
 time. Distinguish paused simulation time, connection loss and mission identity changes.
 Connection loss does not establish a mission-script failure, and a completed monitoring
 process does not establish a completed sortie. Preserve the last successful evidence.
+
+The repository flight monitor includes telemetry failures in its error digest and
+binds observations to one mission identity. It stops with `status: mission_changed`
+when the mission ends, changes or restarts. Start a new monitor output directory
+for the next flight. Log batches whose identity cannot be correlated (including
+connection gaps and the initial batch) remain in `events.jsonl` as `UNCORRELATED_LOG`
+and do not count toward the previous mission's results. The current hook supplies
+filename, generation and process identity; older hooks offer weaker identification.
 
 See [the 2026-11-26 workflow test](results-2026-11-26.md) for observed flight operations,
 framework startup and remaining combat/controller checks.

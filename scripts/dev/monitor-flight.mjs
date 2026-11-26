@@ -104,6 +104,8 @@ async function tail() {
 // --------------------------------------------------------------------------
 const state = {
   startedAt: new Date().toISOString(),
+  status: "waiting",
+  mission: null,
   polls: 0,
   bridge: { lastOk: null, lastError: null, drops: 0, phase: null, phaseHistory: [] },
   counts: {},
@@ -180,56 +182,84 @@ async function handleTelemetry(entry) {
 }
 
 async function poll() {
-  state.polls++;
+  if (polling || state.status === "mission_changed") return;
+  polling = true;
+  try {
+    state.polls++;
 
-  const chunk = await tail();
-  if (chunk) {
-    const entries = parseLog(chunk);
-    for (const entry of entries) {
-      if (await handleTelemetry(entry)) continue;
+    // Sample identity after reading, before attributing this log batch. A load can complete
+    // between polls without us ever observing the intermediate loading phase.
+    const chunk = await tail();
+    const status = await bridge("status");
+    const now = new Date().toISOString();
+    let correlated = false;
+    if (status?.ok) {
+      state.bridge.lastOk = now;
+      state.bridge.lastError = null;
+      const data = status.data ?? {};
+      const identity = { mission: data.mission ?? null, filename: data.missionFilename ?? null,
+        generation: data.missionGeneration ?? null, bridgeSession: data.bridgeSession ?? null };
+      const active = data.phase === "running" || data.phase === "loaded";
+      if (state.mission && (!active || JSON.stringify(identity) !== JSON.stringify(state.mission))) {
+        state.status = "mission_changed";
+        state.finishedAt = now;
+        await append({ at: now, src: "bridge", kind: "MISSION_CHANGED", from: state.mission, to: identity, phase: data.phase });
+      } else if (active && (identity.mission || identity.filename)) {
+        correlated = state.mission !== null;
+        state.mission ??= identity;
+        state.status = "monitoring";
+      } else {
+        state.status = "waiting";
+      }
+      if (data.phase !== state.bridge.phase) {
+        state.bridge.phaseHistory.push({ at: now, from: state.bridge.phase, to: data.phase, mission: data.mission });
+        state.bridge.phase = data.phase;
+        await append({ at: now, src: "bridge", kind: "PHASE", phase: data.phase, mission: data.mission });
+      }
+      state.bridge.status = data;
+    } else {
+      state.status = "bridge_unavailable";
+      state.bridge.drops++;
+      state.bridge.lastError = { at: now, error: status?.error ?? "unknown" };
+      bump("BRIDGE_DROP");
+      await append({ at: now, src: "bridge", kind: "DROP", error: status?.error });
     }
-    // Anything DCS itself flagged. Telemetry lines are excluded: the [DCSMCP]
-    // ERROR lines are already captured above with their fields parsed.
-    for (const p of findProblems(entries)) {
-      if (p.message.includes("[DCSMCP]")) continue;
-      bump("DCS_PROBLEM");
-      const rec = {
-        at: p.timestamp,
-        src: "dcs",
-        level: p.level,
-        source: p.source,
-        message: p.message,
-        detail: p.detail,
-        blames: p.blames,
-      };
-      state.errors.push(rec);
-      if (state.errors.length > 200) state.errors.shift();
-      await append(rec);
+
+    if (chunk && !correlated) {
+      // Preserve uncertain observations for review without counting them as
+      // evidence for the previously observed mission.
+      await append({ at: now, src: "log", kind: "UNCORRELATED_LOG", text: chunk });
+    } else if (chunk) {
+      const entries = parseLog(chunk);
+      for (const entry of entries) {
+        if (await handleTelemetry(entry)) continue;
+      }
+      // Telemetry handling updates feature state, but does not collect errors.
+      // Include those failures here too, preserving their complete traceback.
+      for (const p of findProblems(entries)) {
+        bump("DCS_PROBLEM");
+        const rec = {
+          at: p.timestamp,
+          src: "dcs",
+          level: p.level,
+          source: p.source,
+          message: p.message,
+          detail: p.detail,
+          blames: p.blames,
+        };
+        state.errors.push(rec);
+        if (state.errors.length > 200) state.errors.shift();
+        await append(rec);
+      }
     }
+
+    state.updatedAt = now;
+    await writeFile(DIGEST, JSON.stringify(state, null, 1), "utf8");
+  } finally {
+    polling = false;
   }
-
-  const status = await bridge("status");
-  const now = new Date().toISOString();
-  if (status?.ok) {
-    state.bridge.lastOk = now;
-    state.bridge.lastError = null;
-    const phase = status.data?.phase;
-    if (phase !== state.bridge.phase) {
-      state.bridge.phaseHistory.push({ at: now, from: state.bridge.phase, to: phase, mission: status.data?.mission });
-      state.bridge.phase = phase;
-      await append({ at: now, src: "bridge", kind: "PHASE", phase, mission: status.data?.mission });
-    }
-    state.bridge.status = status.data;
-  } else {
-    state.bridge.drops++;
-    state.bridge.lastError = { at: now, error: status?.error ?? "unknown" };
-    bump("BRIDGE_DROP");
-    await append({ at: now, src: "bridge", kind: "DROP", error: status?.error });
-  }
-
-  state.updatedAt = now;
-  await writeFile(DIGEST, JSON.stringify(state, null, 1), "utf8");
 }
+let polling = false;
 
 // Start at the end of the log: this run cares about what happens from now on,
 // not about the megabytes of startup chatter already on disk.
@@ -241,6 +271,8 @@ console.log(`from offset ${offset}, every ${INTERVAL_MS / 1000}s`);
 console.log(`digest -> ${DIGEST}`);
 
 await poll();
-setInterval(() => {
-  poll().catch((e) => console.error("poll failed:", e.message));
+const interval = setInterval(() => {
+  poll().catch((e) => console.error("poll failed:", e.message)).finally(() => {
+    if (state.status === "mission_changed") clearInterval(interval);
+  });
 }, INTERVAL_MS);

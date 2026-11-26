@@ -1538,3 +1538,29 @@ controller services remain unverified. Background capture last succeeded at
 17:32:39 UTC (model time 1614.413 s); later bridge connection refusals do not
 establish a mission-script failure. See the test record for limitations and
 follow-up checks. No full acceptance pass or release is claimed.
+
+## 2026-11-26 — monitor isolation and load verification fixes
+
+The flight monitor now includes telemetry failures in its error digest, preserves
+their tracebacks, and stops when the bound mission identity changes or ends.
+Filename, lifecycle generation and hook process identity distinguish reloads even
+when the mission title stays the same. Uncorrelated log batches remain in the
+append-only event file and do not contribute to the previous mission's results.
+Overlapping polls are prevented.
+
+The hook tracks load requests separately from mission phase. A nil API return is
+only a request acknowledgement. Verification requires a new running lifecycle and
+the actual requested filename. Explicit false returns and load-error callbacks
+are failures; wrong filenames, unavailable filename APIs and no confirmation after
+30 seconds have separate outcomes. This does not hash the running mission's bytes
+or fix DCS's single-player mission-rotation limitation.
+
+Regression tests reproduced the missing errors and mission mixing before the
+fixes. Hook tests exercise pending, loading, delayed, matching, mismatched,
+unavailable-filename and failed loads under DCS's Lua 5.1 interpreter with stubbed
+simulator APIs. Focused monitor/hook tests passed (13/13); the full suite passed
+438 tests with one optional Windows voice test skipped and no failures or
+cancellations. Type checking, build, whitespace checks and the mocked Lua 5.1
+advanced-runtime check passed. These are code-level checks, not a fresh live DCS
+acceptance run. Reinstall the hook and restart DCS before using the new status
+fields in the simulator. No release was created.

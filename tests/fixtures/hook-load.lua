@@ -346,3 +346,47 @@ print('AIRCRAFT_GUI_HELD '..tostring(#sent==before))
 userCallbacks.onSimulationFrame()
 local aircraftReply=sent[#sent] or ''
 print('AIRCRAFT_STRUCTURED '..tostring(aircraftReply:find('"ok":true',1,true)~=nil and aircraftReply:find('"removed":true',1,true)~=nil))
+
+-- A nil return from net.load_mission is only an acknowledgement. Status must
+-- correlate a new lifecycle with the actual filename, not the mission title.
+local currentFile = 'C:/m/old.miz'
+DCS.getMissionName = function() return 'Same title' end
+DCS.getMissionFilename = function() return currentFile end
+local realTime = os.time
+local now = realTime()
+os.time = function() return now end
+local function statusContains(text)
+  local reply = callSim('{"cmd":"status"}') or ''
+  return reply:find(text, 1, true) ~= nil
+end
+callSim('{"cmd":"loadmission","path":"C:/m/swap.miz"}')
+print('LOAD_REQUEST_PENDING '..tostring(statusContains('"status":"requested"')))
+now = now + 31
+print('LOAD_NO_CHANGE '..tostring(statusContains('"status":"not_observed"')))
+userCallbacks.onMissionLoadBegin()
+print('LOAD_IN_PROGRESS '..tostring(statusContains('"status":"loading"')))
+currentFile = 'c:\\m\\swap.miz'
+userCallbacks.onMissionLoadEnd()
+userCallbacks.onSimulationStart()
+print('LOAD_VERIFIED '..tostring(statusContains('"status":"verified"')))
+callSim('{"cmd":"loadmission","path":"C:/m/swap.miz"}')
+print('LOAD_SAME_FILE_PENDING '..tostring(statusContains('"status":"requested"')))
+userCallbacks.onMissionLoadBegin()
+currentFile = 'C:/different/swap.miz'
+userCallbacks.onMissionLoadEnd()
+userCallbacks.onSimulationStart()
+print('LOAD_WRONG_FILE '..tostring(statusContains('"status":"mismatch"')))
+callSim('{"cmd":"loadmission","path":"C:/m/swap.miz"}')
+userCallbacks.onMissionLoadBegin()
+DCS.getMissionFilename = function() error('API unavailable') end
+userCallbacks.onMissionLoadEnd()
+userCallbacks.onSimulationStart()
+print('LOAD_NO_FILENAME '..tostring(statusContains('"status":"unverified"')))
+net.load_mission = function() return false end
+local refused = callSim('{"cmd":"loadmission","path":"C:/m/swap.miz"}') or ''
+print('LOAD_FALSE_REFUSED '..tostring(refused:find('"ok":false',1,true)~=nil and statusContains('"status":"failed"')))
+net.load_mission = function() return nil end
+callSim('{"cmd":"loadmission","path":"C:/m/swap.miz"}')
+userCallbacks.onMissionLoadError('bad archive')
+print('LOAD_CALLBACK_FAILED '..tostring(statusContains('"status":"failed"')))
+os.time = realTime

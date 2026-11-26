@@ -89,7 +89,12 @@ export function registerBridgeTools(server: McpServer): void {
         "`missionEnv` is derived from simulation frames, not from a probe, so it is false whenever " +
         "mission-environment commands would fail. A paused mission produces no frames.\n\n" +
         "Args: host?, port?\n" +
-        "Returns JSON: { connected, phase, missionEnv, simTicking, mission, response }.",
+        "Returns JSON: { connected, phase, missionEnv, simTicking, mission, response }. With the " +
+        "current hook, response also includes missionFilename, missionGeneration, bridgeSession " +
+        "and loadRequest. loadRequest.status is requested/loading/verified/mismatch/unverified/" +
+        "not_observed/failed. verified requires a new running lifecycle and the actual requested " +
+        "filename; not_observed means no confirmation after 30 seconds, not definite failure. " +
+        "Filename verification does not verify saved-file bytes; use production capture for revision evidence.",
       inputSchema: z.object({ host: hostField, port: portField }).strict(),
       outputSchema: z.object({
         connected: z.boolean(),
@@ -375,7 +380,9 @@ export function registerBridgeTools(server: McpServer): void {
         "mission is up. Poll dcs_bridge_status and verify the running mission identity against " +
         "the requested saved revision; a running phase or accepted request alone does not prove " +
         "the mission changed. Check dcs_get_log_errors afterwards. If the old identity remains, " +
-        "report the load as unverified rather than testing the wrong revision.\n\n" +
+        "report the load as unverified rather than testing the wrong revision. With the current hook, " +
+        "poll dcs_bridge_status response.loadRequest.status for requested/loading/verified or an " +
+        "unconfirmed/failed outcome; older hooks cannot provide this verification.\n\n" +
         "This takes over the user's DCS client; confirm with them before calling it.\n\n" +
         "Args:\n  - path (string): absolute path to a .miz\n  - host?, port?",
       inputSchema: z

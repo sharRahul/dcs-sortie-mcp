@@ -49,7 +49,47 @@ local pending = {}              -- in-flight clients: { sock, buffer, deadline }
 
 -- What DCS is doing right now, so a client can tell "no mission running" apart
 -- from "the bridge is down".
-local missionState = { phase = "menu", name = nil, loadError = nil }
+local missionState = { phase = "menu", name = nil, filename = nil, generation = 0, loadError = nil }
+local loadRequest = nil
+local LOAD_VERIFY_SECONDS = 30
+-- Process-local identity: a restarted hook must not inherit a prior flight's evidence.
+local bridgeSession = tostring(os.time()) .. ":" .. tostring(os.clock()) .. ":" .. tostring({})
+
+local function missionValue(getter)
+  if type(getter) ~= "function" then return nil end
+  local success, value = pcall(getter)
+  if success and type(value) == "string" and value ~= "" then return value end
+end
+
+local function refreshMissionIdentity()
+  missionState.name = missionValue(DCS.getMissionName)
+  missionState.filename = missionValue(DCS.getMissionFilename)
+end
+
+local function normalizedMissionPath(path)
+  return path and path:gsub("\\", "/"):lower()
+end
+
+local function updateLoadRequest()
+  if not loadRequest or loadRequest.status == "failed" or loadRequest.status == "verified" then return end
+  if missionState.phase == "error" then
+    loadRequest.status, loadRequest.error = "failed", missionState.loadError
+  elseif missionState.phase == "running" and missionState.generation > loadRequest.previousGeneration then
+    loadRequest.actual = missionState.filename
+    if not missionState.filename then
+      loadRequest.status = "unverified"
+    elseif normalizedMissionPath(missionState.filename) == normalizedMissionPath(loadRequest.requested) then
+      loadRequest.status = "verified"
+    else
+      loadRequest.status = "mismatch"
+    end
+  elseif missionState.generation > loadRequest.previousGeneration and
+      (missionState.phase == "loading" or missionState.phase == "loaded") then
+    loadRequest.status = "loading"
+  elseif os.time() - loadRequest.requestedAt >= LOAD_VERIFY_SECONDS then
+    loadRequest.status = "not_observed"
+  end
+end
 
 -- When the simulation last ticked. Mission-environment work only happens on the
 -- simulation thread, so this is both the gate for holding such requests and the
@@ -521,6 +561,7 @@ end
   surfacing a confusing timeout.
 --]]
 function handlers.status()
+  updateLoadRequest()
   -- `missionEnv` is judged by simulation frames, NOT by a dostring probe. A
   -- probe like `return 'ok'` succeeds even when it runs in the GUI state, where
   -- none of the mission API exists, so it reported a reachable environment for
@@ -536,6 +577,10 @@ function handlers.status()
     listening = server ~= nil,
     phase = missionState.phase,
     mission = missionState.name,
+    missionFilename = missionState.filename,
+    missionGeneration = missionState.generation,
+    bridgeSession = bridgeSession,
+    loadRequest = loadRequest,
     simTicking = ticking,
     missionEnv = inMission and ticking,
     errorCount = #errors,
@@ -859,12 +904,16 @@ function handlers.loadmission(args)
 
   -- Reached only with a mission running, and (via `needsSimThread`) on the
   -- simulation thread — the only context where net.load_mission takes effect.
+  loadRequest = { requested = path, requestedAt = os.time(), previousGeneration = missionState.generation, status = "requested" }
   local okc, res = pcall(net.load_mission, path)
-  if not okc then
+  if not okc or res == false then
+    loadRequest.status, loadRequest.error = "failed", tostring(res)
     recordError("load_mission failed", res)
-    return fail("net.load_mission raised: " .. tostring(res))
+    return fail("net.load_mission failed: " .. tostring(res))
   end
-  return ok({ requested = path, result = res, note = "loading is asynchronous; poll 'status' for phase" })
+  updateLoadRequest()
+  return ok({ requested = path, result = res, status = loadRequest.status,
+    note = "Request only; poll status.loadRequest. verified requires a new running lifecycle and the actual requested filename; not_observed after 30s is not proof of failure." })
 end
 
 function handlers.exec(args)
@@ -1456,6 +1505,9 @@ local callbacks = {}
 
 function callbacks.onSimulationStart()
   missionState.phase = "running"
+  missionState.generation = missionState.generation + 1
+  refreshMissionIdentity()
+  updateLoadRequest()
   probedSim, probedGui = false, false
   resetScriptingState()
   observerReady, observerAttempts = false, 0
@@ -1486,17 +1538,20 @@ end
 
 function callbacks.onMissionLoadBegin()
   missionState.phase = "loading"
-  missionState.name = (DCS.getMissionName and select(1, pcall(DCS.getMissionName))) and DCS.getMissionName() or nil
+  missionState.generation = missionState.generation + 1
+  missionState.name, missionState.filename = nil, nil
   missionState.loadError = nil
 end
 
 function callbacks.onMissionLoadEnd()
   missionState.phase = "loaded"
+  refreshMissionIdentity()
 end
 
 function callbacks.onMissionLoadError(message)
   missionState.phase = "error"
   missionState.loadError = tostring(message)
+  updateLoadRequest()
   recordError("mission load error", message)
 end
 

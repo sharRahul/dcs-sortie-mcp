@@ -417,6 +417,15 @@ action are otherwise indistinguishable from the cockpit.
 bridge poll and maintains a small `digest.json` (counters, latest player state, every trigger firing,
 every error) that is cheap to re-read while someone is flying.
 
+The digest includes `[DCSMCP]` failures as errors, including their traceback.
+Monitoring is bound to a mission filename/generation and hook process identity
+when the updated hook is installed. A changed or ended mission stops collection
+with `status: mission_changed`; start a fresh output directory for the next flight.
+Log batches observed without a confirmed identity remain in `events.jsonl` as
+`UNCORRELATED_LOG`, separate from the mission digest. See the
+[live acceptance guidance](../testing/live-acceptance/readme.md) for load-verification
+states and the distinction between filename verification and saved-byte evidence.
+
 ```bash
 npm run monitor -- ./.monitor 5
 ```
