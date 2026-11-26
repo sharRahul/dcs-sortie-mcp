@@ -1,0 +1,255 @@
+{
+  "revision": 2,
+  "startedAt": "2026-11-26T17:24:38.065Z",
+  "expiresAt": "2026-11-26T17:39:38.066Z",
+  "polls": 17,
+  "status": "completed",
+  "updatedAt": "2026-11-26T17:32:39.642Z",
+  "finishedAt": "2026-11-26T17:39:39.841Z",
+  "missionTime": 1614.413,
+  "events": [
+    {
+      "place": "Test FARP",
+      "sequence": 1,
+      "initiator": "Lift-1",
+      "target": "none",
+      "kind": "S_EVENT_TAKEOFF",
+      "time": 52.6,
+      "weapon": "none"
+    },
+    {
+      "place": "Fleet-1",
+      "sequence": 2,
+      "initiator": "Deck-1",
+      "target": "none",
+      "kind": "S_EVENT_TAKEOFF",
+      "time": 168.6,
+      "weapon": "none"
+    },
+    {
+      "place": "Kutaisi",
+      "sequence": 3,
+      "initiator": "Ramp-1",
+      "target": "none",
+      "kind": "S_EVENT_TAKEOFF",
+      "time": 199.66,
+      "weapon": "none"
+    },
+    {
+      "place": "Test FARP",
+      "sequence": 4,
+      "initiator": "Lift-1",
+      "target": "none",
+      "kind": "S_EVENT_LAND",
+      "time": 212.62,
+      "weapon": "none"
+    },
+    {
+      "place": "Kutaisi",
+      "sequence": 5,
+      "initiator": "Ramp-2",
+      "target": "none",
+      "kind": "S_EVENT_TAKEOFF",
+      "time": 322.02,
+      "weapon": "none"
+    },
+    {
+      "place": "Kutaisi",
+      "sequence": 6,
+      "initiator": "Taxi-Test-1",
+      "target": "none",
+      "kind": "S_EVENT_TAKEOFF",
+      "time": 352.79,
+      "weapon": "none"
+    },
+    {
+      "place": "Kutaisi",
+      "sequence": 7,
+      "initiator": "SAM-Target-1",
+      "target": "none",
+      "kind": "S_EVENT_LAND",
+      "time": 522.64,
+      "weapon": "none"
+    },
+    {
+      "place": "Fleet-1",
+      "sequence": 8,
+      "initiator": "Deck-1",
+      "target": "none",
+      "kind": "S_EVENT_LAND",
+      "time": 596.68,
+      "weapon": "none"
+    },
+    {
+      "place": "Kutaisi",
+      "sequence": 9,
+      "initiator": "Ramp-1",
+      "target": "none",
+      "kind": "S_EVENT_LAND",
+      "time": 856.7,
+      "weapon": "none"
+    },
+    {
+      "place": "Kutaisi",
+      "sequence": 10,
+      "initiator": "Ramp-2",
+      "target": "none",
+      "kind": "S_EVENT_LAND",
+      "time": 1103.32,
+      "weapon": "none"
+    },
+    {
+      "place": "Kutaisi",
+      "sequence": 11,
+      "initiator": "Taxi-Test-1",
+      "target": "none",
+      "kind": "S_EVENT_LAND",
+      "time": 1318.19,
+      "weapon": "none"
+    }
+  ],
+  "flags": {
+    "1000": 0,
+    "1001": 0,
+    "1002": 0,
+    "1003": 1,
+    "1004": 0,
+    "1005": 0,
+    "1006": 0,
+    "1007": 0,
+    "9101": 1,
+    "9102": 1,
+    "9103": 0,
+    "9110": 1,
+    "9111": 1,
+    "9112": 1
+  },
+  "checks": [
+    {
+      "id": "spawn0",
+      "description": "Ramp spawns alive",
+      "status": "observed",
+      "criterion": {
+        "kind": "group_alive",
+        "group": "Ramp"
+      }
+    },
+    {
+      "id": "spawn1",
+      "description": "Deck spawns alive",
+      "status": "observed",
+      "criterion": {
+        "kind": "group_alive",
+        "group": "Deck"
+      }
+    },
+    {
+      "id": "spawn2",
+      "description": "Lift spawns alive",
+      "status": "observed",
+      "criterion": {
+        "kind": "group_alive",
+        "group": "Lift"
+      }
+    },
+    {
+      "id": "spawn3",
+      "description": "Overlord spawns alive",
+      "status": "observed",
+      "criterion": {
+        "kind": "group_alive",
+        "group": "Overlord"
+      }
+    },
+    {
+      "id": "spawn4",
+      "description": "SAM-Test spawns alive",
+      "status": "observed",
+      "criterion": {
+        "kind": "group_alive",
+        "group": "SAM-Test"
+      }
+    },
+    {
+      "id": "spawn5",
+      "description": "Ground-Test spawns alive",
+      "status": "observed",
+      "criterion": {
+        "kind": "group_alive",
+        "group": "Ground-Test"
+      }
+    },
+    {
+      "id": "spawn6",
+      "description": "Fleet spawns alive",
+      "status": "observed",
+      "criterion": {
+        "kind": "group_alive",
+        "group": "Fleet"
+      }
+    },
+    {
+      "id": "startup",
+      "description": "Framework APIs and IADS configured at mission start",
+      "status": "observed",
+      "criterion": {
+        "kind": "flag_equals",
+        "flag": 9101,
+        "value": 1
+      }
+    },
+    {
+      "id": "timed",
+      "description": "Timed trigger executes",
+      "status": "observed",
+      "criterion": {
+        "kind": "flag_equals",
+        "flag": 9102,
+        "value": 1
+      }
+    },
+    {
+      "id": "ground",
+      "description": "Ground troops placed and alive",
+      "status": "observed",
+      "criterion": {
+        "kind": "group_on_ground",
+        "group": "Ground-Test"
+      }
+    },
+    {
+      "id": "log",
+      "description": "No mission errors after revision marker",
+      "status": "observed",
+      "criterion": {
+        "kind": "log_clean"
+      }
+    },
+    {
+      "id": "voice",
+      "description": "Voice playback heard and controller exchanges tested",
+      "status": "unknown",
+      "criterion": {
+        "kind": "manual"
+      }
+    },
+    {
+      "id": "engagement",
+      "description": "SAM engagement and recovery observed",
+      "status": "unknown",
+      "criterion": {
+        "kind": "manual"
+      }
+    }
+  ],
+  "logProblems": [],
+  "source": "Local monitor-digest.json; paths, process IDs and runtime positions omitted",
+  "revisionId": "ef6ca8e5-b301-43a9-897c-1f048fa40678",
+  "missionSha256": "e0dbd19d4525cc8d62c9a3d76f3d28df1be5514051afe15979472379e1ad8fd8",
+  "connectionErrors": {
+    "count": 13,
+    "firstAt": "2026-11-26T17:33:09.702Z",
+    "lastAt": "2026-11-26T17:39:09.829Z",
+    "reason": "DCS hook connection refused at 127.0.0.1:8899"
+  }
+}

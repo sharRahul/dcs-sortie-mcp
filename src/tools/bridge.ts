@@ -372,9 +372,10 @@ export function registerBridgeTools(server: McpServer): void {
         "success. Check dcs_bridge_status first: if phase is 'menu', ask the user to fly any " +
         "mission, then call this to swap in the authored one.\n\n" +
         "Loading is ASYNCHRONOUS: this returns as soon as DCS accepts the request, not when the " +
-        "mission is up. Poll dcs_bridge_status (phase: running -> loading -> running) and check " +
-        "dcs_get_log_errors afterwards — a mission that fails to open reports it in dcs.log and " +
-        "nowhere else.\n\n" +
+        "mission is up. Poll dcs_bridge_status and verify the running mission identity against " +
+        "the requested saved revision; a running phase or accepted request alone does not prove " +
+        "the mission changed. Check dcs_get_log_errors afterwards. If the old identity remains, " +
+        "report the load as unverified rather than testing the wrong revision.\n\n" +
         "This takes over the user's DCS client; confirm with them before calling it.\n\n" +
         "Args:\n  - path (string): absolute path to a .miz\n  - host?, port?",
       inputSchema: z

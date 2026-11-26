@@ -48,6 +48,25 @@ A cold-menu mission start is manual: select the mission and press Fly. `dcs_load
 only swaps an already running session and returns an asynchronous request, not a flight
 success. Never invoke it during an unrelated flight without explicit operator intent.
 
+After a load request, verify the running mission identity against the intended saved
+revision before collecting results. A running phase or accepted request can still refer
+to the previous mission. Report an unchanged identity as an unverified load; do not
+restart an active user flight automatically.
+
+Keep startup, taxi/takeoff, recovery, weapon firing, audible playback and interactive
+controller responses as separate checks. A framework global, live group, radar warning
+or fired audio trigger does not prove the corresponding service works. Test AWACS with
+an appropriate opposing aircraft and SAMs with a controlled target inside their envelope.
+Do not combine a successful recovery with an unobserved engagement into one pass.
+
+For monitoring, record both the last successful observation time and the monitor finish
+time. Distinguish paused simulation time, connection loss and mission identity changes.
+Connection loss does not establish a mission-script failure, and a completed monitoring
+process does not establish a completed sortie. Preserve the last successful evidence.
+
+See [the 2026-11-26 workflow test](results-2026-11-26.md) for observed flight operations,
+framework startup and remaining combat/controller checks.
+
 While DCS is running, query `dcs_runtime_inspect` with the manifest group names and outcome flag; save the response alongside operator evidence. Log collection works after DCS closes and does not require bridge access.
 
 CI runs stock Lua 5.1 checks on Windows in a dedicated job. To reproduce its

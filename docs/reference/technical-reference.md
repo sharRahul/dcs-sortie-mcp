@@ -137,7 +137,7 @@ Once configured, just ask your AI client in natural language — it calls the to
 
 > "Build that SEAD mission, load it in DCS, and tell me if anything errored."
 
-→ `dcs_miz_*` → `dcs_miz_save_as` → `dcs_load_mission` → `dcs_bridge_status` (poll until `running`) → `dcs_get_log_errors`
+→ `dcs_miz_*` → `dcs_miz_save_as` → `dcs_load_mission` → `dcs_bridge_status` (verify the intended mission identity, not only `running`) → `dcs_get_log_errors`
 
 **Act in a running mission:**
 

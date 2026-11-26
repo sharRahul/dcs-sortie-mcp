@@ -154,7 +154,7 @@ that spot can be in front of the aircraft and block its taxi (seen live).
 |---|---|---|
 | Validate | `dcs_miz_validate`, `dcs_miz_mission_report` | ERROR = DCS cannot load the file; fix them all. Read the warnings. |
 | Save | `dcs_miz_save_as` | Always a new file in `DCS_MISSION_OUTPUT_DIR`; use the returned `outPath`. |
-| Load in DCS | `dcs_load_mission` (swaps a running mission only), then `dcs_get_log_errors` | dcs.log is the only place a load failure shows. |
+| Load in DCS | `dcs_load_mission` (requests a swap in a running mission only), then `dcs_bridge_status` and `dcs_get_log_errors` | Verify the running mission identity against the saved revision. Acceptance of the request or a running phase does not prove the swap occurred. |
 | Flight evidence | `dcs_production_capture`, `dcs_production_status` | Each new revision starts without evidence. |
 
 ## Minimum for "playable"

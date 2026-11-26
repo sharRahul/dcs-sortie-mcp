@@ -1521,3 +1521,20 @@ warning/failure annotations. Prepare GitHub release `44970528388` created tag `v
 and a draft; all four assets downloaded and matched `SHA256SUMS.txt`; `release-acceptance.json` names the same
 commit and runs. "What's new" notes added, then published as Latest:
 https://github.com/sharRahul/dcs-sortie-mcp/releases/tag/v0.1.1
+
+## 2026-11-26 — toolset workflow live observations
+
+The [workflow test record](../testing/live-acceptance/results-2026-11-26.md) and
+[sanitised event/check extract](../testing/live-acceptance/evidence/2026-11-26-toolsets.json)
+record production revision 2, SHA-256
+`e0dbd19d4525cc8d62c9a3d76f3d28df1be5514051afe15979472379e1ad8fd8`,
+in DCS 2.9.31.29434 MT on Caucasus. Eleven automatic checks were observed,
+including framework initialization and clean captured post-marker logs. Native
+events recorded carrier takeoff/recovery, FARP takeoff/return and airfield
+takeoffs/landings. The user flew Ramp-1; AI flight results are identified separately.
+
+This is partial verification: SAM firing, audible playback and interactive
+controller services remain unverified. Background capture last succeeded at
+17:32:39 UTC (model time 1614.413 s); later bridge connection refusals do not
+establish a mission-script failure. See the test record for limitations and
+follow-up checks. No full acceptance pass or release is claimed.
