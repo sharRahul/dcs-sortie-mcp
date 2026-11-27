@@ -2,9 +2,13 @@
 
 > **NOTE:** This is an independent open-source project for DCS World. Not affiliated with or endorsed by Eagle Dynamics.
 
-**Create and edit DCS World missions by talking to your AI assistant.**
+**From mission idea to DCS World.**
 
-Describe the aircraft, enemies, route and objectives you want. DCS Sortie MCP lets your assistant build a mission and save a `.miz` file you can open in DCS World.
+Create, edit and validate DCS World missions by talking to your AI assistant. Describe the aircraft, enemies, route and objectives you want; your assistant uses DCS Sortie MCP to build a `.miz` file you can open in DCS World. It helps you turn an idea into a mission without configuring every detail manually in the Mission Editor.
+
+For mission creators, campaign builders and players who want to spend more time flying their ideas.
+
+[Quick start](#quick-start) · [Example scenarios](examples/scenarios/README.md) · [Releases](https://github.com/sharRahul/dcs-sortie-mcp/releases/latest) · [Client setup](docs/user/clients.md)
 
 ## What can it do?
 
@@ -17,6 +21,18 @@ Describe the aircraft, enemies, route and objectives you want. DCS Sortie MCP le
 - Optionally connect to a running DCS session for live controls and diagnostics.
 
 DCS can stay closed while you build a mission. You need the appropriate DCS maps and aircraft to fly it.
+
+## Quick start
+
+1. **Connect your assistant.** Choose your app in the download table below and follow its setup link. Node.js 20+ is required for the npm package; the Claude Desktop extension includes its dependencies.
+2. **Ask for a small first mission:**
+
+   > Create a fictional Caucasus training mission with an airborne player Su-25T near Kutaisi, clear weather and a short navigation route. Use text-only messages, validate it and save a new file named First_Sortie.miz. Tell me the returned full file path and required modules.
+
+3. **Open the returned file in DCS World.** Check the briefing and player slot in the Mission Editor, then fly. Caucasus and the Su-25T are included with DCS World.
+4. **Revise it in chat:** “Move the start farther from Kutaisi and change the time to sunset. Validate it and save a new copy.”
+
+Mission files are saved under your configured mission output folder; use the path returned by the assistant. See [save-folder settings](docs/user/clients.md#mission-save-folder) if you want a different location. File validation checks structure; flying in DCS checks how the mission behaves.
 
 ## Get DCS Sortie MCP
 
